@@ -1,27 +1,22 @@
 'use client';
 
-import React, { useEffect, useState, Suspense } from 'react';
+import React, { useEffect, Suspense } from 'react';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
 import confetti from 'canvas-confetti';
 import { Header } from '@/components/common/Header';
 import { Footer } from '@/components/common/Footer';
-import { GiftCardVisual } from '@/components/cards/GiftCardVisual';
 import { useVouchr } from '@/context/VouchrContext';
-import { GIFT_CARDS } from '@/data/giftCards';
+import { MOCK_GIFT_CARDS } from '@/lib/giftcards/mock-provider';
 import {
   CheckCircle2,
-  Copy,
-  Check,
   Zap,
   Mail,
-  Share2,
-  Download,
   ArrowRight,
-  Eye,
-  EyeOff,
-  Sparkles,
-  ExternalLink,
+  ShieldCheck,
+  Globe,
+  Clock,
+  Download,
 } from 'lucide-react';
 
 function OrderSuccessContent() {
@@ -29,194 +24,132 @@ function OrderSuccessContent() {
   const orderId = searchParams.get('orderId');
   const { orders, format } = useVouchr();
 
-  const [copiedLink, setCopiedLink] = useState(false);
-  const [copiedCode, setCopiedCode] = useState(false);
-  const [codeRevealed, setCodeRevealed] = useState(false);
-
-  // Find order or fallback to most recent order
   const order = orders.find((o) => o.id === orderId) || orders[0];
   const primaryItem = order?.items[0] || {
     id: 'sample-item',
-    giftCard: GIFT_CARDS[0],
-    denomination: 30,
+    giftCard: MOCK_GIFT_CARDS[0],
+    denomination: 50,
+    quantity: 1,
     recipientType: 'other' as const,
     recipientName: 'Sarah Chen',
     recipientEmail: 'sarah.chen@example.com',
     senderName: 'Alex Mercer',
-    message: 'Enjoy uninterrupted music all year!',
+    message: 'Enjoy your gift!',
     deliveryOption: 'instant' as const,
-    cardDesignSkin: 'classic' as const,
   };
 
   useEffect(() => {
-    // Launch celebratory confetti burst
     try {
       confetti({
-        particleCount: 100,
+        particleCount: 90,
         spread: 70,
         origin: { y: 0.6 },
-        colors: ['#7C3AED', '#FF5722', '#10B981', '#F59E0B'],
+        colors: ['#7C3AED', '#FF5722', '#10B981', '#3B82F6'],
       });
     } catch (_) {}
   }, []);
 
-  const claimUrl = order?.claimUrl || `https://vouchr.com/claim/${order?.orderNumber || 'VCR-99214'}`;
-  const rawCode = order?.voucherCode || 'SPOT-8842-9912-4410';
-
-  const handleCopyLink = () => {
-    navigator.clipboard.writeText(claimUrl);
-    setCopiedLink(true);
-    setTimeout(() => setCopiedLink(false), 3000);
-  };
-
-  const handleCopyCode = () => {
-    navigator.clipboard.writeText(rawCode);
-    setCopiedCode(true);
-    setTimeout(() => setCopiedCode(false), 3000);
-  };
-
   return (
     <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-12 sm:py-16">
-      {/* Celebratory Banner */}
+      {/* Success Celebration Header */}
       <div className="text-center space-y-4 mb-12">
         <div className="w-16 h-16 rounded-full bg-emerald-100 text-emerald-600 flex items-center justify-center mx-auto shadow-sm">
           <CheckCircle2 className="w-9 h-9" />
         </div>
 
-        <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs font-bold">
+        <div className="inline-flex items-center gap-1.5 px-3.5 py-1 rounded-full bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs font-bold">
           <Zap className="w-3.5 h-3.5 fill-emerald-600 text-emerald-600" />
-          <span>Delivered in 12 seconds</span>
+          <span>Delivered in 15 seconds</span>
         </div>
 
+        {/* Requested headline */}
         <h1 className="text-4xl sm:text-5xl font-black text-zinc-950 tracking-tight">
-          Gift sent.
+          Your gift is on its way.
         </h1>
 
         <p className="text-zinc-600 text-base max-w-md mx-auto">
-          We’ve dispatched the digital gift card to{' '}
-          <strong className="text-zinc-900 font-bold">{primaryItem.recipientEmail || 'your email'}</strong>{' '}
-          with your custom message.
+          We’ve processed your order through the official provider gateway and dispatched the digital gift card.
         </p>
 
         <div className="text-xs font-mono text-zinc-400">
-          Order Reference: <span className="font-bold text-zinc-700">{order?.orderNumber || 'VCR-99214'}</span>
+          Order Reference: <strong className="text-zinc-700">{order?.orderNumber || 'VCR-US-99214'}</strong>
         </div>
       </div>
 
-      {/* Collectible Card Showcase */}
-      <div className="bg-white rounded-3xl p-6 sm:p-8 border border-zinc-200/90 shadow-lg mb-8 flex flex-col items-center">
-        <div className="w-full flex items-center justify-between text-xs text-zinc-400 font-semibold mb-6">
-          <span>Digital Voucher Preview</span>
-          <span className="text-emerald-600 font-bold flex items-center gap-1">
-            <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-            Active & Ready for Redemption
-          </span>
-        </div>
-
-        <div className="py-2">
-          <GiftCardVisual
-            card={primaryItem.giftCard}
-            denomination={primaryItem.denomination}
-            recipientName={primaryItem.recipientName}
-            senderName={primaryItem.senderName}
-            message={primaryItem.message}
-            skin={primaryItem.cardDesignSkin}
-            size="md"
-            code={codeRevealed ? rawCode : '••••-••••-••••-••••'}
-            isInteractive={true}
-          />
-        </div>
-
-        {/* Voucher Code Reveal Bar */}
-        <div className="w-full max-w-md mt-8 p-4 rounded-2xl bg-zinc-50 border border-zinc-200 space-y-3">
-          <div className="flex items-center justify-between text-xs">
-            <span className="font-bold text-zinc-700 uppercase tracking-wider">
-              Claim Code
-            </span>
-            <button
-              type="button"
-              onClick={() => setCodeRevealed(!codeRevealed)}
-              className="text-purple-700 hover:text-purple-900 font-bold flex items-center gap-1"
-            >
-              {codeRevealed ? (
-                <>
-                  <EyeOff className="w-3.5 h-3.5" />
-                  <span>Mask</span>
-                </>
-              ) : (
-                <>
-                  <Eye className="w-3.5 h-3.5" />
-                  <span>Reveal Code</span>
-                </>
-              )}
-            </button>
+      {/* Actual Gift Card Artwork Showcase & Order Metadata */}
+      <div className="bg-white rounded-3xl p-6 sm:p-10 border border-zinc-200/90 shadow-lg mb-8 space-y-8">
+        <div className="grid grid-cols-1 md:grid-cols-12 gap-8 items-center">
+          {/* Actual gift card image */}
+          <div className="md:col-span-5 bg-[#F5F4F0] rounded-2xl p-6 flex items-center justify-center border border-zinc-200 shadow-inner">
+            <img
+              src={primaryItem.giftCard.giftCardUrl}
+              alt={`${primaryItem.giftCard.brand} digital gift card`}
+              className="w-full h-auto object-contain filter drop-shadow-lg rounded-xl"
+            />
           </div>
 
-          <div className="flex items-center justify-between gap-2 p-3 bg-white rounded-xl border border-zinc-200 font-mono text-sm font-bold text-zinc-900">
-            <span>{codeRevealed ? rawCode : '••••-••••-••••-••••'}</span>
-            <button
-              type="button"
-              onClick={handleCopyCode}
-              className="p-1.5 rounded-lg text-zinc-500 hover:text-purple-700 hover:bg-purple-50 transition"
-              title="Copy code"
-            >
-              {copiedCode ? <Check className="w-4 h-4 text-emerald-600" /> : <Copy className="w-4 h-4" />}
-            </button>
-          </div>
-        </div>
-      </div>
+          {/* Delivery & Order Details Summary */}
+          <div className="md:col-span-7 space-y-4">
+            <div>
+              <span className="text-[11px] font-extrabold uppercase tracking-wider text-purple-700 block">
+                {primaryItem.giftCard.category}
+              </span>
+              <h2 className="text-2xl sm:text-3xl font-black text-zinc-950">
+                {primaryItem.giftCard.brand} Gift Card
+              </h2>
+              <span className="text-xs text-zinc-500 font-medium flex items-center gap-1 mt-0.5">
+                <Globe className="w-3.5 h-3.5 text-zinc-400" />
+                Region: {primaryItem.giftCard.countryName} ({primaryItem.giftCard.country})
+              </span>
+            </div>
 
-      {/* Sharing & Receipt Actions */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-8">
-        {/* Share direct claim link */}
-        <div className="p-6 rounded-3xl bg-white border border-zinc-200/90 shadow-sm space-y-3">
-          <div className="flex items-center gap-2 font-extrabold text-sm text-zinc-900">
-            <Share2 className="w-4 h-4 text-purple-700" />
-            <span>Share Direct Claim Link</span>
-          </div>
-          <p className="text-xs text-zinc-500">
-            Want to send it directly over WhatsApp, iMessage, or Slack? Copy the personalized link:
-          </p>
-          <button
-            type="button"
-            onClick={handleCopyLink}
-            className="w-full py-2.5 px-4 rounded-xl bg-purple-50 hover:bg-purple-100 text-purple-800 font-bold text-xs flex items-center justify-center gap-2 border border-purple-200 transition"
-          >
-            {copiedLink ? (
-              <>
-                <Check className="w-4 h-4 text-emerald-600" />
-                <span>Copied to Clipboard!</span>
-              </>
-            ) : (
-              <>
-                <Copy className="w-4 h-4" />
-                <span>Copy Shareable Link</span>
-              </>
+            <div className="grid grid-cols-2 gap-4 pt-2 border-t border-zinc-100 text-xs">
+              <div>
+                <span className="text-zinc-400 block font-medium">Recipient</span>
+                <strong className="text-zinc-900 text-sm">{primaryItem.recipientName || 'Friend'}</strong>
+                <span className="text-zinc-500 block truncate">{primaryItem.recipientEmail}</span>
+              </div>
+
+              <div>
+                <span className="text-zinc-400 block font-medium">Amount</span>
+                <strong className="text-zinc-900 text-sm">
+                  {primaryItem.giftCard.currencySymbol}{primaryItem.denomination.toLocaleString()} {primaryItem.giftCard.currency}
+                </strong>
+                <span className="text-zinc-500 block">Quantity: {primaryItem.quantity}</span>
+              </div>
+
+              <div>
+                <span className="text-zinc-400 block font-medium">Delivery Method</span>
+                <span className="text-zinc-800 font-bold capitalize">Instant Digital Email</span>
+              </div>
+
+              <div>
+                <span className="text-zinc-400 block font-medium">Delivery Status</span>
+                <span className="text-emerald-600 font-extrabold flex items-center gap-1">
+                  <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+                  Delivered & Verified
+                </span>
+              </div>
+            </div>
+
+            {primaryItem.message && (
+              <div className="p-3 bg-[#FAF9F6] rounded-xl border border-zinc-200 text-xs text-zinc-700 italic">
+                &ldquo;{primaryItem.message}&rdquo;
+              </div>
             )}
-          </button>
+          </div>
         </div>
 
-        {/* Email & Receipt info */}
-        <div className="p-6 rounded-3xl bg-white border border-zinc-200/90 shadow-sm space-y-3">
-          <div className="flex items-center gap-2 font-extrabold text-sm text-zinc-900">
-            <Mail className="w-4 h-4 text-[#FF5722]" />
-            <span>Receipt Sent</span>
-          </div>
-          <p className="text-xs text-zinc-500">
-            Your official tax invoice and PDF confirmation have been dispatched to your email address.
+        {/* Security notice regarding gift card code */}
+        <div className="p-4 rounded-2xl bg-zinc-50 border border-zinc-200 flex items-center gap-3 text-xs text-zinc-600">
+          <ShieldCheck className="w-5 h-5 text-emerald-600 shrink-0" />
+          <p>
+            <strong>Security Protection:</strong> To prevent unauthorized interception, the live voucher claim link has been delivered exclusively to <strong>{primaryItem.recipientEmail}</strong>. You can also monitor delivery status from your customer dashboard.
           </p>
-          <button
-            type="button"
-            onClick={() => alert('Downloading official receipt PDF...')}
-            className="w-full py-2.5 px-4 rounded-xl bg-zinc-50 hover:bg-zinc-100 text-zinc-800 font-bold text-xs flex items-center justify-center gap-2 border border-zinc-200 transition"
-          >
-            <Download className="w-4 h-4 text-zinc-500" />
-            <span>Download PDF Receipt</span>
-          </button>
         </div>
       </div>
 
-      {/* Main Navigation Actions */}
+      {/* Navigation CTAs */}
       <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
         <Link
           href="/cards"

@@ -5,39 +5,34 @@ import Link from 'next/link';
 import { Header } from '@/components/common/Header';
 import { Footer } from '@/components/common/Footer';
 import { CartDrawer } from '@/components/common/CartDrawer';
-import { BrandIcon } from '@/components/common/BrandIcon';
 import { useVouchr } from '@/context/VouchrContext';
 import { Order, SavedRecipient } from '@/types';
 import {
   Gift,
+  ShoppingBag,
+  CreditCard,
   Users,
   User,
-  Heart,
-  Calendar,
+  Settings,
+  HelpCircle,
   Sparkles,
-  ExternalLink,
-  Copy,
-  Check,
   CheckCircle2,
-  Clock,
-  Zap,
-  ArrowRight,
+  Globe,
   Plus,
   Mail,
   Phone,
-  Settings,
-  HelpCircle,
+  Calendar,
+  ExternalLink,
+  ArrowRight,
 } from 'lucide-react';
 
 export default function AccountPage() {
   const { orders, savedRecipients, addSavedRecipient, format, currency, setCurrency } = useVouchr();
 
-  const [activeTab, setActiveTab] = useState<'orders' | 'recipients' | 'settings'>('orders');
-  const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
-  const [copiedCode, setCopiedCode] = useState(false);
-  const [copiedLink, setCopiedLink] = useState(false);
+  const [activeTab, setActiveTab] = useState<
+    'gift_cards' | 'orders' | 'transactions' | 'recipients' | 'account' | 'support'
+  >('gift_cards');
 
-  // New recipient modal
   const [isAddRecipientOpen, setIsAddRecipientOpen] = useState(false);
   const [newRecName, setNewRecName] = useState('');
   const [newRecEmail, setNewRecEmail] = useState('');
@@ -58,7 +53,7 @@ export default function AccountPage() {
       relationship: newRecRelation,
       occasion: newRecOccasion,
       occasionDate: newRecDate || undefined,
-      favoriteBrands: ['Spotify', 'Uber'],
+      favoriteBrands: ['Amazon', 'Spotify'],
       totalGiftsSent: 0,
     };
 
@@ -70,16 +65,14 @@ export default function AccountPage() {
     setNewRecDate('');
   };
 
-  const copyText = (text: string, type: 'code' | 'link') => {
-    navigator.clipboard.writeText(text);
-    if (type === 'code') {
-      setCopiedCode(true);
-      setTimeout(() => setCopiedCode(false), 2000);
-    } else {
-      setCopiedLink(true);
-      setTimeout(() => setCopiedLink(false), 2000);
-    }
-  };
+  const tabs = [
+    { id: 'gift_cards', label: 'My Gift Cards', icon: <Gift className="w-4 h-4" /> },
+    { id: 'orders', label: 'Orders', icon: <ShoppingBag className="w-4 h-4" /> },
+    { id: 'transactions', label: 'Transactions', icon: <CreditCard className="w-4 h-4" /> },
+    { id: 'recipients', label: 'Recipients', icon: <Users className="w-4 h-4" /> },
+    { id: 'account', label: 'Account', icon: <Settings className="w-4 h-4" /> },
+    { id: 'support', label: 'Support', icon: <HelpCircle className="w-4 h-4" /> },
+  ] as const;
 
   return (
     <div className="min-h-screen flex flex-col bg-[#FAF9F6] text-zinc-900">
@@ -88,7 +81,7 @@ export default function AccountPage() {
 
       <main className="flex-1 py-10 sm:py-14">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          {/* User Profile Overview Card */}
+          {/* Top User Overview */}
           <div className="bg-white rounded-3xl p-6 sm:p-8 border border-zinc-200/90 shadow-sm mb-8 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-6">
             <div className="flex items-center gap-4">
               <div className="w-16 h-16 rounded-2xl bg-purple-700 text-white font-black text-2xl flex items-center justify-center shadow-md shadow-purple-600/20">
@@ -98,141 +91,116 @@ export default function AccountPage() {
                 <div className="flex items-center gap-2">
                   <h1 className="text-2xl font-black text-zinc-950">Alex Mercer</h1>
                   <span className="px-2.5 py-0.5 rounded-full bg-purple-100 text-purple-800 text-xs font-bold">
-                    Pro Gifter
+                    Active Gifter
                   </span>
                 </div>
                 <p className="text-xs text-zinc-500 mt-0.5">
-                  alex.mercer@example.com • Member since 2025
+                  alex.mercer@example.com • Verified Customer
                 </p>
               </div>
             </div>
 
-            <div className="flex items-center gap-3 w-full sm:w-auto">
-              <Link
-                href="/cards"
-                className="w-full sm:w-auto px-5 py-2.5 rounded-xl bg-purple-700 hover:bg-purple-800 text-white font-extrabold text-xs flex items-center justify-center gap-1.5 shadow-sm transition"
-              >
-                <Sparkles className="w-3.5 h-3.5 text-amber-300" />
-                <span>Send a New Gift</span>
-              </Link>
-
-              <Link
-                href="/support"
-                className="px-4 py-2.5 rounded-xl border border-zinc-200 text-zinc-700 hover:bg-zinc-50 font-bold text-xs flex items-center gap-1.5 transition"
-              >
-                <HelpCircle className="w-3.5 h-3.5" />
-                <span>Help</span>
-              </Link>
-            </div>
+            <Link
+              href="/cards"
+              className="w-full sm:w-auto px-5 py-2.5 rounded-xl bg-purple-700 hover:bg-purple-800 text-white font-extrabold text-xs flex items-center justify-center gap-1.5 shadow-sm transition"
+            >
+              <Sparkles className="w-3.5 h-3.5 text-amber-300" />
+              <span>Browse Catalog</span>
+            </Link>
           </div>
 
-          {/* Navigation Tabs */}
-          <div className="flex items-center gap-2 mb-8 border-b border-zinc-200 pb-3">
-            <button
-              type="button"
-              onClick={() => setActiveTab('orders')}
-              className={`px-5 py-2.5 rounded-xl text-xs font-extrabold flex items-center gap-2 transition ${
-                activeTab === 'orders'
-                  ? 'bg-purple-700 text-white shadow-md shadow-purple-600/20'
-                  : 'text-zinc-600 hover:text-zinc-950 hover:bg-white'
-              }`}
-            >
-              <Gift className="w-4 h-4" />
-              <span>Gifts Sent ({orders.length})</span>
-            </button>
-
-            <button
-              type="button"
-              onClick={() => setActiveTab('recipients')}
-              className={`px-5 py-2.5 rounded-xl text-xs font-extrabold flex items-center gap-2 transition ${
-                activeTab === 'recipients'
-                  ? 'bg-purple-700 text-white shadow-md shadow-purple-600/20'
-                  : 'text-zinc-600 hover:text-zinc-950 hover:bg-white'
-              }`}
-            >
-              <Users className="w-4 h-4" />
-              <span>Saved Recipients ({savedRecipients.length})</span>
-            </button>
-
-            <button
-              type="button"
-              onClick={() => setActiveTab('settings')}
-              className={`px-5 py-2.5 rounded-xl text-xs font-extrabold flex items-center gap-2 transition ${
-                activeTab === 'settings'
-                  ? 'bg-purple-700 text-white shadow-md shadow-purple-600/20'
-                  : 'text-zinc-600 hover:text-zinc-950 hover:bg-white'
-              }`}
-            >
-              <Settings className="w-4 h-4" />
-              <span>Settings</span>
-            </button>
+          {/* Navigation Tabs Bar */}
+          <div className="flex items-center gap-2 mb-8 border-b border-zinc-200 pb-3 overflow-x-auto scrollbar-none">
+            {tabs.map((tab) => (
+              <button
+                key={tab.id}
+                type="button"
+                onClick={() => setActiveTab(tab.id)}
+                className={`px-4 py-2.5 rounded-xl text-xs font-extrabold flex items-center gap-2 whitespace-nowrap transition ${
+                  activeTab === tab.id
+                    ? 'bg-purple-700 text-white shadow-md shadow-purple-600/20'
+                    : 'text-zinc-600 hover:text-zinc-950 hover:bg-white'
+                }`}
+              >
+                {tab.icon}
+                <span>{tab.label}</span>
+              </button>
+            ))}
           </div>
 
-          {/* TAB 1: ORDERS & GIFTS SENT */}
-          {activeTab === 'orders' && (
-            <div className="space-y-4">
+          {/* TAB 1: MY GIFT CARDS (Displays actual gift-card artwork) */}
+          {activeTab === 'gift_cards' && (
+            <div className="space-y-6">
               <div className="flex items-center justify-between">
-                <h2 className="text-lg font-black text-zinc-900">Your Gift Card Orders</h2>
-                <span className="text-xs text-zinc-500">
-                  {orders.length} digital vouchers issued
+                <div>
+                  <h2 className="text-xl font-black text-zinc-950">My Gift Cards</h2>
+                  <p className="text-xs text-zinc-500 mt-0.5">
+                    Your active and delivered digital gift cards displaying official artwork.
+                  </p>
+                </div>
+                <span className="text-xs font-bold text-zinc-500">
+                  {orders.length} digital vouchers
                 </span>
               </div>
 
-              <div className="space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                 {orders.map((order) => {
                   const item = order.items[0];
                   return (
                     <div
                       key={order.id}
-                      className="bg-white rounded-3xl p-6 border border-zinc-200/90 shadow-sm hover:border-purple-200 transition-all flex flex-col md:flex-row md:items-center justify-between gap-6"
+                      className="bg-white rounded-3xl p-6 border border-zinc-200/90 shadow-sm flex flex-col justify-between hover:border-purple-200 hover:shadow-md transition"
                     >
-                      <div className="flex items-start gap-4">
-                        <div className="w-14 h-14 rounded-2xl bg-zinc-950 flex items-center justify-center shrink-0 p-2.5 shadow-sm">
-                          <BrandIcon brandId={item.giftCard.id} size={32} className="w-8 h-8" />
+                      {/* Actual Gift Card Artwork Presentation */}
+                      <div className="relative w-full pt-[60%] bg-[#F5F4F0] rounded-2xl overflow-hidden p-4 mb-4 border border-zinc-200 flex items-center justify-center">
+                        <div className="absolute inset-3 flex items-center justify-center">
+                          <img
+                            src={item.giftCard.giftCardUrl}
+                            alt={`${item.giftCard.brand} card`}
+                            className="w-full h-full object-contain filter drop-shadow-md rounded-lg"
+                          />
                         </div>
-
-                        <div>
-                          <div className="flex items-center gap-2.5">
-                            <h3 className="font-extrabold text-base text-zinc-900">
-                              {item.giftCard.brand} Gift Card
-                            </h3>
-                            <span className="px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-emerald-100 text-emerald-800 flex items-center gap-1">
-                              <CheckCircle2 className="w-3 h-3" />
-                              {order.deliveryStatus.toUpperCase()}
-                            </span>
-                          </div>
-
-                          <div className="text-xs text-zinc-500 mt-1">
-                            Sent to:{' '}
-                            <strong className="text-zinc-800">
-                              {item.recipientName || 'Myself'}
-                            </strong>{' '}
-                            ({item.recipientEmail || 'Immediate access'})
-                          </div>
-
-                          <div className="text-xs text-zinc-400 mt-1 flex items-center gap-3">
-                            <span>Ref: {order.orderNumber}</span>
-                            <span>•</span>
-                            <span>{new Date(order.createdAt).toLocaleDateString()}</span>
-                          </div>
+                        <div className="absolute top-2.5 left-2.5 px-2 py-0.5 rounded-full text-[10px] font-black bg-white/90 text-zinc-800 border border-zinc-200">
+                          {item.giftCard.country}
                         </div>
                       </div>
 
-                      <div className="flex items-center justify-between md:justify-end gap-6 pt-4 md:pt-0 border-t md:border-t-0 border-zinc-100">
-                        <div className="text-left md:text-right">
-                          <span className="text-xs text-zinc-400 block font-medium">Face Value</span>
-                          <span className="text-lg font-black text-zinc-950">
-                            {format(order.totalUSD)}
+                      <div className="space-y-2">
+                        <div className="flex items-start justify-between gap-2">
+                          <h3 className="font-extrabold text-base text-zinc-900 truncate">
+                            {item.giftCard.brand}
+                          </h3>
+                          <span className="font-black text-base text-purple-700 shrink-0">
+                            {item.giftCard.currencySymbol}{item.denomination.toLocaleString()}
                           </span>
                         </div>
 
-                        <button
-                          type="button"
-                          onClick={() => setSelectedOrder(order)}
-                          className="px-4 py-2 rounded-xl bg-purple-50 hover:bg-purple-100 text-purple-700 font-extrabold text-xs transition"
+                        <div className="text-xs text-zinc-500 space-y-0.5">
+                          <div>
+                            Recipient: <strong className="text-zinc-800">{item.recipientName || 'Myself'}</strong>
+                          </div>
+                          <div>
+                            Email: <span className="text-zinc-700 truncate">{item.recipientEmail}</span>
+                          </div>
+                        </div>
+
+                        <div className="flex items-center justify-between text-[11px] pt-3 border-t border-zinc-100">
+                          <span className="text-emerald-600 font-bold flex items-center gap-1">
+                            <CheckCircle2 className="w-3.5 h-3.5" />
+                            Delivered
+                          </span>
+                          <span className="font-mono text-zinc-400">{order.orderNumber}</span>
+                        </div>
+                      </div>
+
+                      <div className="mt-4 pt-3 border-t border-zinc-100 flex items-center justify-between">
+                        <Link
+                          href={`/order-success?orderId=${order.id}`}
+                          className="text-xs font-bold text-purple-700 hover:text-purple-900 flex items-center gap-1"
                         >
-                          View Voucher Details
-                        </button>
+                          <span>View delivery receipt</span>
+                          <ArrowRight className="w-3 h-3" />
+                        </Link>
                       </div>
                     </div>
                   );
@@ -241,75 +209,143 @@ export default function AccountPage() {
             </div>
           )}
 
-          {/* TAB 2: SAVED RECIPIENTS */}
+          {/* TAB 2: ORDERS */}
+          {activeTab === 'orders' && (
+            <div className="space-y-4">
+              <h2 className="text-xl font-black text-zinc-950 mb-2">Order History</h2>
+              <div className="bg-white rounded-3xl border border-zinc-200/90 overflow-hidden shadow-sm">
+                <div className="divide-y divide-zinc-100">
+                  {orders.map((order) => {
+                    const item = order.items[0];
+                    return (
+                      <div key={order.id} className="p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                        <div className="flex items-center gap-4">
+                          <div className="w-16 h-11 bg-zinc-100 rounded-xl p-1 border border-zinc-200 shrink-0 flex items-center justify-center overflow-hidden">
+                            <img
+                              src={item.giftCard.giftCardUrl}
+                              alt={item.giftCard.brand}
+                              className="w-full h-full object-contain"
+                            />
+                          </div>
+                          <div>
+                            <div className="flex items-center gap-2">
+                              <h4 className="font-extrabold text-sm text-zinc-900">{item.giftCard.brand} Gift Card</h4>
+                              <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
+                                Delivered
+                              </span>
+                            </div>
+                            <span className="text-xs text-zinc-400">
+                              {order.orderNumber} • {new Date(order.createdAt).toLocaleDateString()}
+                            </span>
+                          </div>
+                        </div>
+
+                        <div className="flex items-center justify-between sm:justify-end gap-6">
+                          <span className="font-black text-sm text-zinc-900">
+                            {format(order.totalUSD)}
+                          </span>
+                          <Link
+                            href={`/order-success?orderId=${order.id}`}
+                            className="text-xs font-bold px-3 py-1.5 rounded-xl bg-purple-50 text-purple-700 hover:bg-purple-100 transition"
+                          >
+                            Receipt
+                          </Link>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* TAB 3: TRANSACTIONS */}
+          {activeTab === 'transactions' && (
+            <div className="space-y-4">
+              <h2 className="text-xl font-black text-zinc-950 mb-2">Transaction Records</h2>
+              <div className="bg-white rounded-3xl border border-zinc-200/90 overflow-hidden shadow-sm">
+                <table className="w-full text-left text-xs">
+                  <thead className="bg-zinc-50 border-b border-zinc-100 text-zinc-500 font-bold uppercase tracking-wider">
+                    <tr>
+                      <th className="p-4">Transaction ID</th>
+                      <th className="p-4">Brand</th>
+                      <th className="p-4">Method</th>
+                      <th className="p-4">Date</th>
+                      <th className="p-4 text-right">Amount</th>
+                      <th className="p-4 text-center">Status</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-zinc-100">
+                    {orders.map((o) => (
+                      <tr key={o.id} className="hover:bg-zinc-50/50">
+                        <td className="p-4 font-mono font-bold text-zinc-900">{o.orderNumber}</td>
+                        <td className="p-4 font-semibold text-zinc-800">{o.items[0]?.giftCard.brand}</td>
+                        <td className="p-4 uppercase text-zinc-500">{o.paymentMethod.replace('_', ' ')}</td>
+                        <td className="p-4 text-zinc-500">{new Date(o.createdAt).toLocaleDateString()}</td>
+                        <td className="p-4 font-black text-right text-zinc-900">{format(o.totalUSD)}</td>
+                        <td className="p-4 text-center">
+                          <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800">
+                            Completed
+                          </span>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
+
+          {/* TAB 4: RECIPIENTS */}
           {activeTab === 'recipients' && (
             <div className="space-y-6">
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+              <div className="flex items-center justify-between">
                 <div>
-                  <h2 className="text-lg font-black text-zinc-900">Saved Friends & Family</h2>
-                  <p className="text-xs text-zinc-500 mt-0.5">
-                    Never forget a birthday or milestone. Send gifts with a single click.
-                  </p>
+                  <h2 className="text-xl font-black text-zinc-950">Saved Recipients</h2>
+                  <p className="text-xs text-zinc-500">Store friends and upcoming birthdays for quick gifting.</p>
                 </div>
-
                 <button
                   type="button"
                   onClick={() => setIsAddRecipientOpen(true)}
-                  className="px-4 py-2.5 rounded-xl bg-purple-700 hover:bg-purple-800 text-white font-bold text-xs flex items-center gap-1.5 shadow-sm transition"
+                  className="px-4 py-2.5 rounded-xl bg-purple-700 text-white font-bold text-xs flex items-center gap-1.5 shadow-sm hover:bg-purple-800 transition"
                 >
                   <Plus className="w-4 h-4" />
                   <span>Add Recipient</span>
                 </button>
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                 {savedRecipients.map((rec) => (
-                  <div
-                    key={rec.id}
-                    className="bg-white rounded-3xl p-6 border border-zinc-200/90 shadow-sm flex flex-col justify-between hover:border-purple-200 transition"
-                  >
+                  <div key={rec.id} className="bg-white rounded-3xl p-6 border border-zinc-200/90 shadow-sm flex flex-col justify-between">
                     <div>
                       <div className="flex items-center justify-between mb-3">
                         <div className="w-10 h-10 rounded-full bg-purple-100 text-purple-700 font-extrabold text-sm flex items-center justify-center">
-                          {rec.name.split(' ').map((n) => n[0]).join('')}
+                          {rec.name.split(' ').map(n => n[0]).join('')}
                         </div>
                         <span className="text-[11px] font-bold text-zinc-500 bg-zinc-100 px-2.5 py-0.5 rounded-full">
                           {rec.relationship}
                         </span>
                       </div>
-
                       <h3 className="font-extrabold text-base text-zinc-900">{rec.name}</h3>
-                      <div className="text-xs text-zinc-500 space-y-1 mt-1.5">
-                        <div className="flex items-center gap-1.5">
+                      <div className="text-xs text-zinc-500 mt-1 space-y-1">
+                        <div className="flex items-center gap-1">
                           <Mail className="w-3.5 h-3.5 text-zinc-400" />
                           <span>{rec.email}</span>
                         </div>
-                        {rec.phone && (
-                          <div className="flex items-center gap-1.5">
-                            <Phone className="w-3.5 h-3.5 text-zinc-400" />
-                            <span>{rec.phone}</span>
-                          </div>
-                        )}
                       </div>
-
                       {rec.occasion && (
-                        <div className="mt-4 p-3 rounded-2xl bg-amber-50 border border-amber-200/80 text-xs text-amber-900 flex items-center gap-2">
+                        <div className="mt-4 p-3 rounded-2xl bg-amber-50 border border-amber-200 text-xs text-amber-900 flex items-center gap-2">
                           <Calendar className="w-4 h-4 text-amber-600 shrink-0" />
-                          <div>
-                            <span className="font-bold">{rec.occasion}:</span>{' '}
-                            {rec.occasionDate ? new Date(rec.occasionDate).toLocaleDateString(undefined, { month: 'short', day: 'numeric' }) : 'Soon'}
-                          </div>
+                          <span>{rec.occasion} reminder active</span>
                         </div>
                       )}
                     </div>
 
                     <div className="mt-6 pt-4 border-t border-zinc-100 flex items-center justify-between">
-                      <span className="text-xs text-zinc-400">
-                        {rec.totalGiftsSent} gifts sent
-                      </span>
+                      <span className="text-xs text-zinc-400">{rec.totalGiftsSent} gifts sent</span>
                       <Link
                         href="/cards"
-                        className="px-3.5 py-1.5 rounded-xl bg-purple-700 hover:bg-purple-800 text-white text-xs font-bold flex items-center gap-1 transition"
+                        className="px-3 py-1.5 rounded-xl bg-purple-700 hover:bg-purple-800 text-white text-xs font-bold flex items-center gap-1 transition"
                       >
                         <span>Send Gift</span>
                         <ArrowRight className="w-3 h-3" />
@@ -321,139 +357,64 @@ export default function AccountPage() {
             </div>
           )}
 
-          {/* TAB 3: SETTINGS */}
-          {activeTab === 'settings' && (
-            <div className="max-w-2xl bg-white rounded-3xl p-6 sm:p-8 border border-zinc-200/90 shadow-sm space-y-6">
-              <h2 className="text-xl font-black text-zinc-900">Gifting Preferences</h2>
+          {/* TAB 5: ACCOUNT SETTINGS */}
+          {activeTab === 'account' && (
+            <div className="max-w-xl bg-white rounded-3xl p-6 sm:p-8 border border-zinc-200/90 shadow-sm space-y-6">
+              <h2 className="text-xl font-black text-zinc-900">Account Preferences</h2>
+              <div>
+                <label className="text-xs font-bold text-zinc-700 block mb-1">Display Currency</label>
+                <select
+                  value={currency}
+                  onChange={(e) => setCurrency(e.target.value as any)}
+                  className="w-full px-4 py-3 rounded-xl border border-zinc-200 text-sm font-semibold focus:border-purple-600 focus:outline-none"
+                >
+                  <option value="USD">USD ($) - United States Dollar</option>
+                  <option value="EUR">EUR (€) - Euro</option>
+                  <option value="GBP">GBP (£) - British Pound</option>
+                  <option value="NGN">NGN (₦) - Nigerian Naira</option>
+                  <option value="KES">KES (KSh) - Kenyan Shilling</option>
+                </select>
+              </div>
 
-              <div className="space-y-4">
-                <div>
-                  <label className="text-xs font-bold text-zinc-700 block mb-1">
-                    Preferred Currency
-                  </label>
-                  <select
-                    value={currency}
-                    onChange={(e) => setCurrency(e.target.value as any)}
-                    className="w-full px-4 py-3 rounded-xl border border-zinc-200 text-sm font-semibold focus:border-purple-600 focus:outline-none"
-                  >
-                    <option value="USD">USD ($) - United States Dollar</option>
-                    <option value="EUR">EUR (€) - Euro</option>
-                    <option value="GBP">GBP (£) - British Pound</option>
-                    <option value="NGN">NGN (₦) - Nigerian Naira</option>
-                    <option value="KES">KES (KSh) - Kenyan Shilling</option>
-                  </select>
-                </div>
+              <div className="pt-4 border-t border-zinc-100 space-y-2">
+                <h4 className="text-sm font-bold text-zinc-900">Delivery Notifications</h4>
+                <label className="flex items-center gap-2 text-xs text-zinc-600">
+                  <input type="checkbox" defaultChecked className="rounded text-purple-600" />
+                  <span>Notify me when recipient receives their card</span>
+                </label>
+                <label className="flex items-center gap-2 text-xs text-zinc-600">
+                  <input type="checkbox" defaultChecked className="rounded text-purple-600" />
+                  <span>Send birthday alerts for saved recipients</span>
+                </label>
+              </div>
+            </div>
+          )}
 
-                <div className="pt-4 border-t border-zinc-100">
-                  <h4 className="font-extrabold text-sm text-zinc-900 mb-2">Notification Alerts</h4>
-                  <div className="space-y-2 text-xs text-zinc-600">
-                    <label className="flex items-center gap-2.5 cursor-pointer">
-                      <input type="checkbox" defaultChecked className="rounded text-purple-600 focus:ring-purple-500" />
-                      <span>Email notification when recipient opens or claims voucher</span>
-                    </label>
-                    <label className="flex items-center gap-2.5 cursor-pointer">
-                      <input type="checkbox" defaultChecked className="rounded text-purple-600 focus:ring-purple-500" />
-                      <span>Upcoming birthday reminders 7 days in advance</span>
-                    </label>
-                    <label className="flex items-center gap-2.5 cursor-pointer">
-                      <input type="checkbox" defaultChecked className="rounded text-purple-600 focus:ring-purple-500" />
-                      <span>Exclusive brand discounts and cashback promos</span>
-                    </label>
-                  </div>
-                </div>
+          {/* TAB 6: SUPPORT */}
+          {activeTab === 'support' && (
+            <div className="max-w-2xl bg-white rounded-3xl p-6 sm:p-8 border border-zinc-200/90 shadow-sm space-y-4">
+              <h2 className="text-xl font-black text-zinc-900">Concierge Help</h2>
+              <p className="text-xs text-zinc-600 leading-relaxed">
+                Need help with a delivered card or have a question about provider redemption?
+              </p>
+              <div className="pt-2 flex items-center gap-3">
+                <Link
+                  href="/support"
+                  className="px-5 py-2.5 rounded-xl bg-purple-700 text-white font-bold text-xs hover:bg-purple-800 transition"
+                >
+                  Visit Help Center
+                </Link>
+                <Link
+                  href="/support#contact"
+                  className="px-5 py-2.5 rounded-xl border border-zinc-200 text-zinc-700 font-bold text-xs hover:bg-zinc-50 transition"
+                >
+                  Contact Concierge
+                </Link>
               </div>
             </div>
           )}
         </div>
       </main>
-
-      {/* Order Detail Modal */}
-      {selectedOrder && (
-        <div className="fixed inset-0 z-50 overflow-y-auto bg-black/60 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="bg-white rounded-3xl max-w-lg w-full p-6 sm:p-8 shadow-2xl border border-zinc-200 space-y-6 animate-in fade-in zoom-in-95 duration-200">
-            <div className="flex items-center justify-between pb-4 border-b border-zinc-100">
-              <div className="flex items-center gap-2.5">
-                <div className="w-10 h-10 rounded-xl bg-zinc-950 flex items-center justify-center p-2">
-                  <BrandIcon brandId={selectedOrder.items[0].giftCard.id} size={24} className="w-6 h-6" />
-                </div>
-                <div>
-                  <h3 className="font-extrabold text-base text-zinc-900">
-                    {selectedOrder.items[0].giftCard.brand} Gift Card
-                  </h3>
-                  <span className="text-xs text-zinc-400">
-                    Ref: {selectedOrder.orderNumber}
-                  </span>
-                </div>
-              </div>
-              <button
-                type="button"
-                onClick={() => setSelectedOrder(null)}
-                className="text-zinc-400 hover:text-zinc-700 p-1"
-              >
-                ✕
-              </button>
-            </div>
-
-            <div className="space-y-4 text-xs">
-              <div className="p-4 rounded-2xl bg-zinc-50 border border-zinc-200 space-y-2">
-                <div className="text-zinc-400 uppercase font-bold text-[10px]">Digital Claim Code</div>
-                <div className="flex items-center justify-between font-mono text-base font-black text-purple-700">
-                  <span>{selectedOrder.voucherCode}</span>
-                  <button
-                    type="button"
-                    onClick={() => copyText(selectedOrder.voucherCode, 'code')}
-                    className="text-xs font-sans px-2.5 py-1 rounded-lg bg-purple-100 text-purple-800 font-bold hover:bg-purple-200 transition"
-                  >
-                    {copiedCode ? 'Copied!' : 'Copy Code'}
-                  </button>
-                </div>
-              </div>
-
-              <div className="space-y-1.5">
-                <div className="flex justify-between text-zinc-600">
-                  <span>Recipient:</span>
-                  <span className="font-bold text-zinc-900">{selectedOrder.items[0].recipientName || 'Myself'}</span>
-                </div>
-                <div className="flex justify-between text-zinc-600">
-                  <span>Email:</span>
-                  <span className="font-bold text-zinc-900">{selectedOrder.items[0].recipientEmail || 'Account email'}</span>
-                </div>
-                <div className="flex justify-between text-zinc-600">
-                  <span>Face Value:</span>
-                  <span className="font-bold text-zinc-900">{format(selectedOrder.totalUSD)}</span>
-                </div>
-                <div className="flex justify-between text-zinc-600">
-                  <span>Delivery Status:</span>
-                  <span className="font-bold text-emerald-600 capitalize">{selectedOrder.deliveryStatus}</span>
-                </div>
-              </div>
-
-              {selectedOrder.items[0].message && (
-                <div className="p-3 bg-purple-50/60 rounded-xl border border-purple-100 text-purple-900 italic">
-                  &ldquo;{selectedOrder.items[0].message}&rdquo;
-                </div>
-              )}
-            </div>
-
-            <div className="pt-2 flex items-center justify-between gap-3">
-              <button
-                type="button"
-                onClick={() => copyText(selectedOrder.claimUrl, 'link')}
-                className="flex-1 py-3 rounded-xl bg-purple-700 text-white font-extrabold text-xs flex items-center justify-center gap-1.5 hover:bg-purple-800 transition"
-              >
-                {copiedLink ? 'Link Copied!' : 'Copy Claim Link'}
-              </button>
-              <button
-                type="button"
-                onClick={() => setSelectedOrder(null)}
-                className="px-5 py-3 rounded-xl border border-zinc-200 text-zinc-700 font-bold text-xs hover:bg-zinc-50 transition"
-              >
-                Close
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
 
       {/* Add Recipient Modal */}
       {isAddRecipientOpen && (
@@ -493,43 +454,6 @@ export default function AccountPage() {
                   placeholder="e.g. david@example.com"
                   className="w-full px-3.5 py-2.5 rounded-xl border border-zinc-200 text-xs font-medium focus:border-purple-600 focus:outline-none"
                 />
-              </div>
-
-              <div>
-                <label className="text-xs font-bold text-zinc-700 block mb-1">Relationship</label>
-                <select
-                  value={newRecRelation}
-                  onChange={(e) => setNewRecRelation(e.target.value)}
-                  className="w-full px-3.5 py-2.5 rounded-xl border border-zinc-200 text-xs font-semibold focus:border-purple-600 focus:outline-none"
-                >
-                  <option value="Best Friend">Best Friend</option>
-                  <option value="Family">Family</option>
-                  <option value="Partner">Partner</option>
-                  <option value="Colleague">Colleague</option>
-                  <option value="Client">Client</option>
-                </select>
-              </div>
-
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="text-xs font-bold text-zinc-700 block mb-1">Occasion</label>
-                  <input
-                    type="text"
-                    value={newRecOccasion}
-                    onChange={(e) => setNewRecOccasion(e.target.value)}
-                    placeholder="Birthday"
-                    className="w-full px-3.5 py-2.5 rounded-xl border border-zinc-200 text-xs font-medium focus:border-purple-600 focus:outline-none"
-                  />
-                </div>
-                <div>
-                  <label className="text-xs font-bold text-zinc-700 block mb-1">Occasion Date</label>
-                  <input
-                    type="date"
-                    value={newRecDate}
-                    onChange={(e) => setNewRecDate(e.target.value)}
-                    className="w-full px-3.5 py-2.5 rounded-xl border border-zinc-200 text-xs font-medium focus:border-purple-600 focus:outline-none"
-                  />
-                </div>
               </div>
 
               <div className="pt-3 flex items-center justify-end gap-3">

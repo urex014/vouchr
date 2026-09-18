@@ -1,0 +1,9 @@
+<svg width="400" height="250" viewBox="0 0 400 250" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <rect width="400" height="250" rx="16" fill="#282828"/>
+      <rect x="1" y="1" width="398" height="248" rx="15" stroke="rgba(246,139,30,0.3)" stroke-width="2"/>
+      <circle cx="200" cy="105" r="44" fill="#F68B1E"/>
+      <path d="M200 80l6 14 15 2-11 11 3 15-13-7-13 7 3-15-11-11 15-2 6-14z" fill="#FFFFFF"/>
+      <text x="200" y="180" text-anchor="middle" fill="#FFFFFF" font-family="-apple-system, sans-serif" font-size="24" font-weight="900" letter-spacing="-0.5">JUMIA</text>
+      <text x="200" y="205" text-anchor="middle" fill="#F68B1E" font-family="-apple-system, sans-serif" font-size="12" font-weight="800">SHOPPING VOUCHER • NIGERIA (NG)</text>
+      <text x="40" y="45" fill="#888" font-family="-apple-system, sans-serif" font-size="12" font-weight="700">₦ NAIRA REDEEMABLE</text>
+    </svg>

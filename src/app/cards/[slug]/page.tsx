@@ -1,11 +1,17 @@
 import { notFound } from 'next/navigation';
-import { GIFT_CARDS } from '@/data/giftCards';
+import { MOCK_GIFT_CARDS } from '@/lib/giftcards/mock-provider';
 import { ProductCustomizer } from './ProductCustomizer';
 
 export async function generateStaticParams() {
-  return GIFT_CARDS.map((card) => ({
-    slug: card.slug,
-  }));
+  const paths: { slug: string }[] = [];
+  for (const card of MOCK_GIFT_CARDS) {
+    paths.push({ slug: card.id });
+    // Also include brand slug if unique
+    if (!paths.some((p) => p.slug === card.brandSlug)) {
+      paths.push({ slug: card.brandSlug });
+    }
+  }
+  return paths;
 }
 
 interface ProductPageProps {
@@ -14,7 +20,9 @@ interface ProductPageProps {
 
 export default async function ProductPage({ params }: ProductPageProps) {
   const { slug } = await params;
-  const card = GIFT_CARDS.find((c) => c.slug === slug);
+  const card = MOCK_GIFT_CARDS.find(
+    (c) => c.id === slug || c.brandSlug.toLowerCase() === slug.toLowerCase()
+  );
 
   if (!card) {
     notFound();

@@ -1,0 +1,12 @@
+<svg width="400" height="250" viewBox="0 0 400 250" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <rect width="400" height="250" rx="16" fill="#141414"/>
+      <rect x="1" y="1" width="398" height="248" rx="15" stroke="rgba(229,9,20,0.3)" stroke-width="2"/>
+      <rect x="0" y="244" width="400" height="6" fill="#E50914"/>
+      <g transform="translate(170, 55) scale(1.6)">
+        <path d="M7 2h8v50H7V2zm22 0h8v50h-8V2z" fill="#B81D24"/>
+        <path d="M7 2h8l15 50h-8L7 2z" fill="#E50914"/>
+      </g>
+      <text x="200" y="185" text-anchor="middle" fill="#FFFFFF" font-family="-apple-system, sans-serif" font-size="16" font-weight="900" letter-spacing="1">NETFLIX</text>
+      <text x="200" y="208" text-anchor="middle" fill="#888" font-family="-apple-system, sans-serif" font-size="11" font-weight="600">Prepaid Subscription Card • US</text>
+      <text x="360" y="40" text-anchor="end" fill="#E50914" font-family="-apple-system, sans-serif" font-size="11" font-weight="800">STREAMING</text>
+    </svg>

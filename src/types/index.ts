@@ -1,4 +1,14 @@
+import { ProviderGiftCard, CountryCode, GiftCardCategory as ProviderCategory } from '@/lib/giftcards/types';
+
 export type GiftCardCategory = 
+  | 'Shopping'
+  | 'Gaming'
+  | 'Entertainment'
+  | 'Food'
+  | 'Travel'
+  | 'Subscriptions'
+  | 'Lifestyle'
+  | 'Digital Services'
   | 'all'
   | 'gaming'
   | 'entertainment'
@@ -15,26 +25,29 @@ export interface CurrencyConfig {
   symbol: string;
   label: string;
   flag: string;
-  rateAgainstUSD: number; // 1 USD = rate
+  rateAgainstUSD: number;
 }
 
 export interface GiftCard {
   id: string;
-  slug: string;
+  slug?: string;
   brand: string;
-  tagline: string;
+  brandSlug?: string;
+  tagline?: string;
   description: string;
-  category: GiftCardCategory;
-  denominations: number[]; // in USD base
+  category: any;
+  denominations: number[];
   minCustomAmount?: number;
   maxCustomAmount?: number;
-  region: string;
-  regionsSupported: string[];
-  discountPercentage?: number; // e.g., 5% off
+  region?: string;
+  country?: string;
+  regionsSupported?: string[];
+  discountPercentage?: number;
   isPopular?: boolean;
   isFeatured?: boolean;
+  isTrending?: boolean;
   isNew?: boolean;
-  cardTheme: {
+  cardTheme?: {
     bgGradient: string;
     textColor: string;
     accentColor: string;
@@ -42,17 +55,18 @@ export interface GiftCard {
     badgeBg: string;
   };
   logoUrl: string;
-  heroImage?: string;
-  redemptionSteps: string[];
-  termsAndConditions: string[];
-  rating: number;
-  reviewsCount: number;
+  giftCardUrl?: string;
+  redemptionSteps?: string[];
+  termsAndConditions?: string[];
+  rating?: number;
+  reviewsCount?: number;
 }
 
 export interface CartItem {
   id: string;
-  giftCard: GiftCard;
-  denomination: number; // in USD
+  giftCard: ProviderGiftCard;
+  denomination: number;
+  quantity: number;
   recipientType: 'other' | 'self';
   recipientName?: string;
   recipientEmail?: string;
@@ -62,7 +76,7 @@ export interface CartItem {
   deliveryOption: 'instant' | 'scheduled';
   scheduledDate?: string;
   scheduledTime?: string;
-  cardDesignSkin: 'classic' | 'warm-coral' | 'electric-neon' | 'midnight-velvet';
+  cardDesignSkin?: string;
 }
 
 export interface Order {
@@ -71,7 +85,7 @@ export interface Order {
   createdAt: string;
   items: CartItem[];
   totalUSD: number;
-  currency: CurrencyCode;
+  currency: string;
   totalInCurrency: number;
   paymentMethod: 'card' | 'apple_pay' | 'google_pay' | 'instant_bank' | 'mobile_money' | 'crypto';
   paymentStatus: 'completed' | 'processing' | 'refunded';

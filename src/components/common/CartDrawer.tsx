@@ -3,8 +3,7 @@
 import React from 'react';
 import Link from 'next/link';
 import { useVouchr } from '@/context/VouchrContext';
-import { BrandIcon } from '@/components/common/BrandIcon';
-import { X, Trash2, ArrowRight, ShieldCheck, ShoppingBag } from 'lucide-react';
+import { X, Trash2, ArrowRight, ShieldCheck, ShoppingBag, Globe } from 'lucide-react';
 
 export const CartDrawer: React.FC = () => {
   const { cart, removeFromCart, clearCart, isCartOpen, setIsCartOpen, format, cartTotalUSD } = useVouchr();
@@ -49,7 +48,7 @@ export const CartDrawer: React.FC = () => {
                 </div>
                 <h3 className="font-bold text-zinc-800 text-base">Your gift bag is empty</h3>
                 <p className="text-xs text-zinc-400 max-w-xs">
-                  Pick a card from top global brands and personalize it in seconds.
+                  Pick official gift cards from verified brands and personalize them in seconds.
                 </p>
                 <Link
                   href="/cards"
@@ -67,17 +66,27 @@ export const CartDrawer: React.FC = () => {
                 return (
                   <div
                     key={item.id}
-                    className="p-3.5 rounded-2xl border border-zinc-200/90 bg-zinc-50/50 flex gap-3.5 relative group"
+                    className="p-3.5 rounded-2xl border border-zinc-200/90 bg-zinc-50/60 flex gap-3.5 relative group"
                   >
-                    <div className="w-14 h-14 rounded-xl bg-zinc-900 flex items-center justify-center shrink-0 p-2 shadow-sm">
-                      <BrandIcon brandId={item.giftCard.id} size={28} className="w-7 h-7" />
+                    {/* Actual gift-card artwork thumbnail */}
+                    <div className="w-20 h-14 rounded-xl bg-zinc-100 border border-zinc-200 p-1 shrink-0 flex items-center justify-center overflow-hidden">
+                      <img
+                        src={item.giftCard.giftCardUrl}
+                        alt={`${item.giftCard.brand} gift card`}
+                        className="w-full h-full object-contain"
+                      />
                     </div>
 
                     <div className="flex-1 min-w-0">
                       <div className="flex items-start justify-between">
-                        <h4 className="font-extrabold text-sm text-zinc-900 truncate">
-                          {item.giftCard.brand}
-                        </h4>
+                        <div>
+                          <h4 className="font-extrabold text-sm text-zinc-900 truncate">
+                            {item.giftCard.brand}
+                          </h4>
+                          <span className="text-[10px] font-bold text-zinc-500 block">
+                            Region: {item.giftCard.countryName || item.giftCard.country}
+                          </span>
+                        </div>
                         <button
                           type="button"
                           onClick={() => removeFromCart(item.id)}
@@ -88,7 +97,7 @@ export const CartDrawer: React.FC = () => {
                         </button>
                       </div>
 
-                      <div className="text-xs text-zinc-500 font-medium">
+                      <div className="text-xs text-zinc-500 font-medium mt-1">
                         To: <span className="text-zinc-800 font-semibold">{item.recipientName || 'Myself'}</span>
                       </div>
 
@@ -121,7 +130,7 @@ export const CartDrawer: React.FC = () => {
                 </div>
                 <div className="flex justify-between text-sm font-extrabold text-zinc-950 pt-2 border-t border-zinc-100">
                   <span>Total</span>
-                  <span className="text-lg text-purple-700">{format(cartTotalUSD)}</span>
+                  <span className="text-lg text-purple-700 font-black">{format(cartTotalUSD)}</span>
                 </div>
               </div>
 

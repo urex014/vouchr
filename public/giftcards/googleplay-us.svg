@@ -1,0 +1,12 @@
+<svg width="400" height="250" viewBox="0 0 400 250" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <rect width="400" height="250" rx="16" fill="#FFFFFF"/>
+      <rect x="1" y="1" width="398" height="248" rx="15" stroke="#E0E0E0" stroke-width="2"/>
+      <g transform="translate(170, 50) scale(3)">
+        <path d="M3.5 2.5v15l8-7.5-8-7.5z" fill="#00A0FF"/>
+        <path d="M3.5 17.5l7.5-7 2.5 2.5-7.5 5c-1 .6-2.5 0-2.5-.5z" fill="#FF3A44"/>
+        <path d="M13.5 10.5l-2-2 2-2 2 1c.8.5.8 1.5 0 2l-2 1z" fill="#FFC800"/>
+        <path d="M3.5 2.5c0-.5 1.5-1.1 2.5-.5l7.5 5-2.5 2.5-7.5-7z" fill="#00E676"/>
+      </g>
+      <text x="200" y="175" text-anchor="middle" fill="#3C4043" font-family="-apple-system, sans-serif" font-size="20" font-weight="800">Google Play</text>
+      <text x="200" y="200" text-anchor="middle" fill="#70757A" font-family="-apple-system, sans-serif" font-size="12" font-weight="600">Gift code for apps, games, & subscriptions • US</text>
+    </svg>

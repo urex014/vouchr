@@ -1,9 +1,10 @@
 'use client';
 
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import { CartItem, CurrencyCode, Order, SavedRecipient, GiftCard } from '@/types';
+import { CartItem, CurrencyCode, Order, SavedRecipient } from '@/types';
+import { ProviderGiftCard } from '@/lib/giftcards/types';
 import { CURRENCIES, formatPrice } from '@/data/currencies';
-import { GIFT_CARDS } from '@/data/giftCards';
+import { MOCK_GIFT_CARDS } from '@/lib/giftcards/mock-provider';
 
 interface VouchrContextType {
   currency: CurrencyCode;
@@ -54,7 +55,7 @@ const INITIAL_RECIPIENTS: SavedRecipient[] = [
     relationship: 'Sister',
     occasion: 'Graduation',
     occasionDate: '2026-11-15',
-    favoriteBrands: ['Apple', 'Sephora', 'Nike'],
+    favoriteBrands: ['Apple', 'Nike'],
     totalGiftsSent: 3,
   },
 ];
@@ -62,61 +63,61 @@ const INITIAL_RECIPIENTS: SavedRecipient[] = [
 const INITIAL_ORDERS: Order[] = [
   {
     id: 'ord-849201',
-    orderNumber: 'VCR-99214',
+    orderNumber: 'VCR-US-99214',
     createdAt: '2026-09-15T14:22:00Z',
     items: [
       {
         id: 'ci-1',
-        giftCard: GIFT_CARDS[0], // Spotify
-        denomination: 30,
+        giftCard: MOCK_GIFT_CARDS[0], // Amazon US
+        denomination: 50,
+        quantity: 1,
         recipientType: 'other',
         recipientName: 'Sarah Chen',
         recipientEmail: 'sarah.chen@example.com',
         senderName: 'Alex Mercer',
-        message: 'Happy early birthday Sarah! Enjoy uninterrupted playlists all year.',
+        message: 'Happy early birthday Sarah! Pick something awesome on Amazon.',
         deliveryOption: 'instant',
-        cardDesignSkin: 'classic',
+      },
+    ],
+    totalUSD: 50,
+    currency: 'USD',
+    totalInCurrency: 50,
+    paymentMethod: 'apple_pay',
+    paymentStatus: 'completed',
+    deliveryStatus: 'delivered',
+    deliveryTimestamp: '2026-09-15T14:22:18Z',
+    voucherCode: 'AMZN-9942-8812-7491',
+    pinCode: '8839',
+    claimUrl: 'https://vouchr.com/claim/vcr-us-99214',
+  },
+  {
+    id: 'ord-849202',
+    orderNumber: 'VCR-GLOBAL-99182',
+    createdAt: '2026-09-08T09:10:00Z',
+    items: [
+      {
+        id: 'ci-2',
+        giftCard: MOCK_GIFT_CARDS[2], // Spotify Global
+        denomination: 30,
+        quantity: 1,
+        recipientType: 'other',
+        recipientName: 'Kofi Mensah',
+        recipientEmail: 'kofi.mensah@example.com',
+        senderName: 'Alex Mercer',
+        message: 'Enjoy the music tunes brother!',
+        deliveryOption: 'instant',
       },
     ],
     totalUSD: 30,
     currency: 'USD',
     totalInCurrency: 30,
-    paymentMethod: 'apple_pay',
-    paymentStatus: 'completed',
-    deliveryStatus: 'opened',
-    deliveryTimestamp: '2026-09-15T14:22:18Z',
-    voucherCode: 'SPOT-9942-8812-7491',
-    pinCode: '8839',
-    claimUrl: 'https://vouchr.com/claim/vcr-99214-spot',
-  },
-  {
-    id: 'ord-849202',
-    orderNumber: 'VCR-99182',
-    createdAt: '2026-09-08T09:10:00Z',
-    items: [
-      {
-        id: 'ci-2',
-        giftCard: GIFT_CARDS[2], // PlayStation
-        denomination: 50,
-        recipientType: 'other',
-        recipientName: 'Kofi Mensah',
-        recipientEmail: 'kofi.mensah@example.com',
-        senderName: 'Alex Mercer',
-        message: 'Congrats on the promotion mate! Time to get that new game.',
-        deliveryOption: 'instant',
-        cardDesignSkin: 'electric-neon',
-      },
-    ],
-    totalUSD: 47.5, // 5% discount
-    currency: 'USD',
-    totalInCurrency: 47.5,
     paymentMethod: 'card',
     paymentStatus: 'completed',
-    deliveryStatus: 'claimed',
+    deliveryStatus: 'delivered',
     deliveryTimestamp: '2026-09-08T09:10:14Z',
-    voucherCode: 'PSN-7731-9024-1148',
+    voucherCode: 'SPOT-7731-9024-1148',
     pinCode: '4410',
-    claimUrl: 'https://vouchr.com/claim/vcr-99182-psn',
+    claimUrl: 'https://vouchr.com/claim/vcr-global-99182',
   },
 ];
 
@@ -130,7 +131,6 @@ export const VouchrProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   const [savedRecipients, setSavedRecipients] = useState<SavedRecipient[]>(INITIAL_RECIPIENTS);
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'info' | 'error' } | null>(null);
 
-  // Initialize from localStorage safely in browser
   useEffect(() => {
     try {
       const storedCurrency = localStorage.getItem('vouchr_currency') as CurrencyCode;
@@ -208,14 +208,16 @@ export const VouchrProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     const codePart2 = Math.floor(1000 + Math.random() * 9000);
     const codePart3 = Math.floor(1000 + Math.random() * 9000);
 
+    const countryCode = newOrderData.items[0]?.giftCard.country || 'US';
+
     const fullOrder: Order = {
       ...newOrderData,
       id: `ord-${Date.now()}`,
-      orderNumber: `VCR-${randomSuffix}`,
+      orderNumber: `VCR-${countryCode}-${randomSuffix}`,
       createdAt: new Date().toISOString(),
       voucherCode: `${brandPrefix}-${codePart1}-${codePart2}-${codePart3}`,
       pinCode: `${Math.floor(1000 + Math.random() * 9000)}`,
-      claimUrl: `https://vouchr.com/claim/vcr-${randomSuffix}`,
+      claimUrl: `https://vouchr.com/claim/vcr-${countryCode.toLowerCase()}-${randomSuffix}`,
     };
 
     setOrders((prev) => {
@@ -226,7 +228,7 @@ export const VouchrProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       return updated;
     });
 
-    // If recipient is new and has name and email, auto-add to saved recipients
+    // Auto-save recipient if new
     const primaryItem = newOrderData.items[0];
     if (primaryItem && primaryItem.recipientName && primaryItem.recipientEmail) {
       const exists = savedRecipients.some(
@@ -266,7 +268,7 @@ export const VouchrProvider: React.FC<{ children: React.ReactNode }> = ({ childr
 
   const cartTotalUSD = cart.reduce((acc, item) => {
     const discount = item.giftCard.discountPercentage ? item.giftCard.discountPercentage / 100 : 0;
-    return acc + item.denomination * (1 - discount);
+    return acc + (item.denomination * item.quantity) * (1 - discount);
   }, 0);
 
   return (

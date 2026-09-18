@@ -1,0 +1,18 @@
+<svg width="400" height="250" viewBox="0 0 400 250" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <rect width="400" height="250" rx="16" fill="#131921"/>
+      <rect x="1" y="1" width="398" height="248" rx="15" stroke="rgba(255,255,255,0.08)" stroke-width="2"/>
+      <g transform="translate(60, 80)">
+        <path d="M72 15c-1.2-8.5-6-13-14-13-10 0-16 6-16 15 0 9 6 15 16 15 4 0 8-1 11-4v14c-4 2-9 3-15 3-17 0-29-11-29-28 0-18 12-28 29-28 17 0 28 10 28 26v41h-10V45z" fill="#FFFFFF"/>
+        <path d="M96 15h11v43H96V15zm0-18h11v11H96V-3z" fill="#FFFFFF"/>
+        <path d="M124 15h11v7c3-5 8-8 15-8 12 0 19 8 19 22v22h-11V37c0-8-4-12-11-12s-13 4-13 12v21h-11V15z" fill="#FFFFFF"/>
+        <path d="M213 36c0 14-10 23-24 23s-24-9-24-23 10-23 24-23 24 9 24 23zm-11 0c0-9-5-14-13-14s-13 5-13 14 5 14 13 14 13-5 13-14z" fill="#FFFFFF"/>
+        <path d="M233 15h11v7c3-5 8-8 15-8 12 0 19 8 19 22v22h-11V37c0-8-4-12-11-12s-13 4-13 12v21h-11V15z" fill="#FFFFFF"/>
+        <!-- Amazon Smile -->
+        <path d="M20 62c60 28 180 28 240-5 3-1.5 5 1.5 2 3.5-65 37-185 37-244-1.5-2.5-1.5-.5-4 2-2z" fill="#FF9900"/>
+        <path d="M256 50c3 3.5 9 10 13 13.5 1 .8.5 2-1 2-5 .2-15-1.5-20-3.5-1.5-.6-1.5-2 0-2.2 4-.8 6.5-4 8-9.8z" fill="#FF9900"/>
+      </g>
+      <text x="360" y="42" text-anchor="end" fill="#999" font-family="-apple-system, sans-serif" font-size="12" font-weight="700" letter-spacing="1">GIFT CARD</text>
+      <text x="360" y="222" text-anchor="end" fill="#FF9900" font-family="-apple-system, sans-serif" font-size="14" font-weight="800">US REGION</text>
+      <circle cx="44" cy="40" r="14" fill="#232F3E"/>
+      <text x="44" y="45" text-anchor="middle" fill="#FF9900" font-family="-apple-system, sans-serif" font-size="13" font-weight="900">$</text>
+    </svg>
