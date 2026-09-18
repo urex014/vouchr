@@ -24,7 +24,37 @@ function OrderSuccessContent() {
   const searchParams = useSearchParams();
   const orderId = searchParams.get('orderId');
   const { orders, format } = useVouchr();
-  const order = orders.find((o) => o.id === orderId) || orders[0];
+
+  const [dbOrder, setDbOrder] = React.useState<any>(null);
+  const [loadingOrder, setLoadingOrder] = React.useState(true);
+
+  // Fetch real order from MongoDB API
+  React.useEffect(() => {
+    async function loadOrder() {
+      if (!orderId) {
+        setLoadingOrder(false);
+        return;
+      }
+      try {
+        const res = await fetch(`/api/orders/${orderId}`);
+        if (res.ok) {
+          const json = await res.json();
+          if (json.success && json.data) {
+            setDbOrder(json.data);
+            return;
+          }
+        }
+      } catch (err) {
+        console.warn('Failed to load order from API:', err);
+      } finally {
+        setLoadingOrder(false);
+      }
+    }
+    loadOrder();
+  }, [orderId]);
+
+  const contextOrder = orders.find((o) => o.id === orderId) || orders[0];
+  const order = dbOrder || contextOrder;
 
   const [voucherData, setVoucherData] = React.useState<any>(null);
   const [loadingVoucher, setLoadingVoucher] = React.useState(false);
@@ -38,7 +68,7 @@ function OrderSuccessContent() {
 
     setLoadingVoucher(true);
     try {
-      const targetId = orderId || order?.id || 'ord-849201';
+      const targetId = orderId || order?._id || order?.id;
       const res = await fetch(`/api/orders/${targetId}/voucher`);
       if (res.ok) {
         const json = await res.json();
@@ -47,15 +77,6 @@ function OrderSuccessContent() {
           return;
         }
       }
-      // Fallback
-      setVoucherData({
-        orderNumber: order?.orderNumber || 'VCR-US-99214',
-        claimUrl: order?.claimUrl || `https://vouchr.com/claim/${(order?.orderNumber || 'vcr-us-99214').toLowerCase()}`,
-        secureCodes: {
-          claimCode: 'VCR-US-9841-4412-9901',
-          pin: '4491',
-        },
-      });
     } catch (err) {
       console.warn('Failed to fetch voucher:', err);
     } finally {
@@ -74,7 +95,16 @@ function OrderSuccessContent() {
     } catch (_) {}
   }, []);
 
-  if (!order || !order.items || order.items.length === 0) {
+  if (loadingOrder) {
+    return (
+      <div className="max-w-4xl mx-auto px-4 py-20 text-center space-y-3">
+        <div className="w-10 h-10 border-4 border-purple-700 border-t-transparent rounded-full animate-spin mx-auto" />
+        <p className="text-xs font-bold text-zinc-500">Retrieving order verification...</p>
+      </div>
+    );
+  }
+
+  if (!order) {
     return (
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-20 text-center">
         <h1 className="text-3xl font-black text-zinc-950 mb-4">No recent order found</h1>
@@ -89,7 +119,16 @@ function OrderSuccessContent() {
     );
   }
 
-  const primaryItem = order.items[0];
+  // Normalize order item properties whether from MongoDB document or client CartItem
+  const brandName = order.brandName || order.items?.[0]?.giftCard?.brand || 'Gift Card';
+  const productImage = order.productImage || order.items?.[0]?.giftCard?.giftCardUrl || '/giftcards/amazon-us.svg';
+  const country = order.country || order.items?.[0]?.giftCard?.country || 'US';
+  const currency = order.currency || order.items?.[0]?.giftCard?.currency || 'USD';
+  const amount = order.amount || order.items?.[0]?.denomination || order.total || 50;
+  const quantity = order.quantity || order.items?.[0]?.quantity || 1;
+  const recipientEmail = order.recipientEmail || order.items?.[0]?.recipientEmail || 'friend@example.com';
+  const recipientName = order.recipientName || order.items?.[0]?.recipientName || 'Friend';
+  const message = order.personalMessage || order.items?.[0]?.message;
 
   return (
     <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-12 sm:py-16">
@@ -124,8 +163,8 @@ function OrderSuccessContent() {
           {/* Actual gift card image */}
           <div className="md:col-span-5 bg-[#F5F4F0] rounded-2xl p-6 flex items-center justify-center border border-zinc-200 shadow-inner">
             <img
-              src={primaryItem.giftCard.giftCardUrl}
-              alt={`${primaryItem.giftCard.brand} digital gift card`}
+              src={productImage}
+              alt={`${brandName} digital gift card`}
               className="w-full h-auto object-contain filter drop-shadow-lg rounded-xl"
             />
           </div>
@@ -134,30 +173,30 @@ function OrderSuccessContent() {
           <div className="md:col-span-7 space-y-4">
             <div>
               <span className="text-[11px] font-extrabold uppercase tracking-wider text-purple-700 block">
-                {primaryItem.giftCard.category}
+                Digital Gift Voucher
               </span>
               <h2 className="text-2xl sm:text-3xl font-black text-zinc-950">
-                {primaryItem.giftCard.brand} Gift Card
+                {brandName} Gift Card
               </h2>
               <span className="text-xs text-zinc-500 font-medium flex items-center gap-1 mt-0.5">
                 <Globe className="w-3.5 h-3.5 text-zinc-400" />
-                Region: {primaryItem.giftCard.countryName} ({primaryItem.giftCard.country})
+                Region: {country}
               </span>
             </div>
 
             <div className="grid grid-cols-2 gap-4 pt-2 border-t border-zinc-100 text-xs">
               <div>
                 <span className="text-zinc-400 block font-medium">Recipient</span>
-                <strong className="text-zinc-900 text-sm">{primaryItem.recipientName || 'Friend'}</strong>
-                <span className="text-zinc-500 block truncate">{primaryItem.recipientEmail}</span>
+                <strong className="text-zinc-900 text-sm">{recipientName}</strong>
+                <span className="text-zinc-500 block truncate">{recipientEmail}</span>
               </div>
 
               <div>
                 <span className="text-zinc-400 block font-medium">Amount</span>
                 <strong className="text-zinc-900 text-sm">
-                  {primaryItem.giftCard.currencySymbol}{primaryItem.denomination.toLocaleString()} {primaryItem.giftCard.currency}
+                  ${amount.toLocaleString()} {currency}
                 </strong>
-                <span className="text-zinc-500 block">Quantity: {primaryItem.quantity}</span>
+                <span className="text-zinc-500 block">Quantity: {quantity}</span>
               </div>
 
               <div>
@@ -169,14 +208,14 @@ function OrderSuccessContent() {
                 <span className="text-zinc-400 block font-medium">Delivery Status</span>
                 <span className="text-emerald-600 font-extrabold flex items-center gap-1">
                   <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-                  Delivered & Verified
+                  {order.deliveryStatus || 'Delivered & Verified'}
                 </span>
               </div>
             </div>
 
-            {primaryItem.message && (
+            {message && (
               <div className="p-3 bg-[#FAF9F6] rounded-xl border border-zinc-200 text-xs text-zinc-700 italic">
-                &ldquo;{primaryItem.message}&rdquo;
+                &ldquo;{message}&rdquo;
               </div>
             )}
 
@@ -219,7 +258,7 @@ function OrderSuccessContent() {
           <div className="flex items-center gap-3">
             <ShieldCheck className="w-5 h-5 text-emerald-600 shrink-0" />
             <p>
-              <strong>Fulfillment Verified:</strong> The live voucher claim link has been dispatched to <strong>{primaryItem.recipientEmail}</strong>.
+              <strong>Fulfillment Verified:</strong> The live voucher claim link has been dispatched to <strong>{recipientEmail}</strong>.
             </p>
           </div>
 

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getOrderById } from '@/lib/orders/store';
+import { OrderService } from '@/server/services/orderService';
+import { getServerSession } from '@/lib/auth/session';
 
 export async function GET(
   request: NextRequest,
@@ -7,8 +8,8 @@ export async function GET(
 ) {
   try {
     const { id } = await params;
-    // Always sanitized - strips out secureCodes (card numbers / PINs)
-    const order = await getOrderById(id, false);
+    const session = await getServerSession(request);
+    const order = await OrderService.getOrder(id, session);
 
     if (!order) {
       return NextResponse.json(
@@ -22,10 +23,9 @@ export async function GET(
       data: order,
     });
   } catch (error: any) {
-    console.error(`[API /api/orders/[id]] Error:`, error);
     return NextResponse.json(
-      { success: false, error: 'Failed to retrieve order' },
-      { status: 500 }
+      { success: false, error: error.message || 'Failed to retrieve order' },
+      { status: error.status || 500 }
     );
   }
 }

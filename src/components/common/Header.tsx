@@ -32,6 +32,7 @@ export const Header: React.FC = () => {
     { label: 'How It Works', href: '/#how-it-works' },
     { label: 'Support', href: '/support' },
     { label: 'Account', href: '/account' },
+    { label: 'Admin', href: '/admin' },
   ];
 
   return (

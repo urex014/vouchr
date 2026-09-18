@@ -1,14 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { verifyServerSidePayment } from '@/lib/payments';
-import { createOrder, updateOrder } from '@/lib/orders/store';
-import {
-  getReloadlyGiftCardById,
-  orderReloadlyGiftCard,
-  getReloadlyOrderCards,
-} from '@/lib/reloadly/giftcards';
+import { OrderService } from '@/server/services/orderService';
+import { PaymentService } from '@/server/services/paymentService';
+import { getServerSession } from '@/lib/auth/session';
 
 export async function POST(request: NextRequest) {
   try {
+    const session = await getServerSession(request);
     const body = await request.json();
 
     const {
@@ -16,22 +13,19 @@ export async function POST(request: NextRequest) {
       paymentMethod = 'card',
       cardDetails,
       cryptoDetails,
-      clientToken,
 
       // Order & Product details
       reloadlyProductId,
       amount,
-      currency = 'USD',
       quantity = 1,
       customerEmail,
       recipientEmail,
       recipientName,
       senderName,
       personalMessage,
-      scheduledDate,
     } = body;
 
-    // Validation
+    // 1. Validation
     if (!reloadlyProductId) {
       return NextResponse.json(
         { success: false, error: 'Product ID is required for checkout.' },
@@ -54,160 +48,56 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Verify product exists in Reloadly catalog and validate amounts
-    const product = await getReloadlyGiftCardById(reloadlyProductId, true);
-    if (!product || !product.isAvailable) {
-      return NextResponse.json(
-        {
-          success: false,
-          error: 'This gift card is currently unavailable from the provider.',
-        },
-        { status: 404 }
-      );
-    }
-
-    // Range vs Fixed amount validation
-    if (product.denominationType === 'FIXED') {
-      if (product.fixedAmounts.length > 0 && !product.fixedAmounts.includes(amount)) {
-        return NextResponse.json(
-          {
-            success: false,
-            error: `Invalid denomination ${amount}. Allowed denominations: ${product.fixedAmounts.join(', ')}`,
-          },
-          { status: 400 }
-        );
-      }
-    } else {
-      if (amount < product.minAmount || amount > product.maxAmount) {
-        return NextResponse.json(
-          {
-            success: false,
-            error: `Amount ${amount} is outside allowed range (${product.currencySymbol}${product.minAmount} - ${product.currencySymbol}${product.maxAmount}).`,
-          },
-          { status: 400 }
-        );
-      }
-    }
-
-    const totalToCharge = amount * quantity;
-
-    // 1. CRITICAL: Verify payment on server-side first
-    const paymentVerification = await verifyServerSidePayment({
-      paymentMethod,
-      amount: totalToCharge,
-      currency: product.currency,
-      cardDetails,
-      cryptoDetails,
-      clientToken,
-    });
-
-    if (!paymentVerification.success) {
-      console.warn('[Checkout API] Payment declined:', paymentVerification.error);
-      return NextResponse.json(
-        {
-          success: false,
-          error: paymentVerification.error || 'Payment authorization failed. Please check your details.',
-        },
-        { status: 402 }
-      );
-    }
-
-    // 2. Create order record with verified payment status
-    const order = await createOrder({
-      reloadlyProductId: product.numericId,
-      brandName: product.brandName,
-      productName: product.productName,
-      productImage: product.productImage,
-      country: product.country,
-      currency: product.currency,
-      amount,
-      quantity,
-      customerEmail: customerEmail || targetRecipientEmail,
-      recipientEmail: targetRecipientEmail,
+    // 2. Create Order document in MongoDB via OrderService
+    const order = await OrderService.createOrder({
+      reloadlyProductId: Number(reloadlyProductId),
+      amount: Number(amount),
+      quantity: Number(quantity),
+      customerEmail: (customerEmail || targetRecipientEmail).toLowerCase().trim(),
+      customerName: senderName || 'Vouchr Customer',
+      recipientEmail: targetRecipientEmail.toLowerCase().trim(),
       recipientName: recipientName || 'Friend',
-      senderName: senderName || 'A thoughtful friend',
       personalMessage,
-      scheduledDate,
+      userId: session?.userId,
     });
 
-    await updateOrder(order.orderId, {
-      status: 'PAYMENT_SUCCESS',
-      paymentStatus: 'VERIFIED',
-      paymentMethod,
-      cryptoTxHash: cryptoDetails?.txHash,
-      explorerUrl: paymentVerification.explorerUrl,
+    // 3. Initialize Payment document in MongoDB
+    const paymentInit = await PaymentService.initializePayment({
+      orderId: order._id.toString(),
+      provider: paymentMethod as any,
+      userId: session?.userId,
     });
 
-    // 3. Execute Reloadly Gift Card purchase via official API
-    let reloadlyOrder;
-    try {
-      reloadlyOrder = await orderReloadlyGiftCard({
-        productId: product.numericId,
-        countryCode: product.country === 'GLOBAL' ? 'US' : product.country,
-        quantity,
-        unitPrice: amount,
-        customIdentifier: order.orderNumber,
-        senderName: senderName || 'Vouchr Customer',
-        recipientEmail: targetRecipientEmail,
-      });
-    } catch (reloadlyError: any) {
-      console.error('[Checkout API] Reloadly fulfillment error:', reloadlyError);
-      await updateOrder(order.orderId, {
-        status: 'FAILED',
-      });
-      return NextResponse.json(
-        {
-          success: false,
-          error: 'Payment was captured, but provider fulfillment failed. Our concierge team has been notified.',
-          orderId: order.orderId,
-        },
-        { status: 502 }
-      );
-    }
-
-    // 4. Securely fetch digital card codes/PINs from Reloadly and store safely server-side
-    let secureCodes: { cardNumber?: string; pin?: string; claimCode?: string } | undefined;
-    try {
-      const cards = await getReloadlyOrderCards(reloadlyOrder.transactionId);
-      if (cards && cards.length > 0) {
-        const primaryCard = cards[0];
-        secureCodes = {
-          cardNumber: primaryCard.cardNumber,
-          pin: primaryCard.pin,
-          claimCode: primaryCard.claimCode || primaryCard.cardNumber,
-        };
-      }
-    } catch (cardErr) {
-      console.warn('[Checkout API] Could not retrieve digital codes immediately:', cardErr);
-    }
-
-    // 5. Update order to PURCHASED and DELIVERED
-    const finalOrder = await updateOrder(order.orderId, {
-      status: 'PURCHASED',
-      reloadlyTransactionId: reloadlyOrder.transactionId,
-      deliveryStatus: scheduledDate ? 'SCHEDULED' : 'DELIVERED',
-      deliveryTimestamp: new Date().toISOString(),
-      secureCodes,
+    // 4. Verify Payment on-chain/card and fulfill via Reloadly
+    const verificationResult = await PaymentService.verifyPayment({
+      orderId: order._id.toString(),
+      providerReference: paymentInit.providerReference,
+      provider: paymentMethod,
+      cryptoDetails,
+      cardDetails,
     });
+
+    const finalOrder = verificationResult.order;
 
     return NextResponse.json({
       success: true,
-      orderId: order.orderId,
-      orderNumber: order.orderNumber,
-      status: finalOrder?.status || 'PURCHASED',
-      claimUrl: order.claimUrl,
-      deliveryStatus: finalOrder?.deliveryStatus || 'DELIVERED',
-      explorerUrl: paymentVerification.explorerUrl,
+      orderId: finalOrder._id,
+      orderNumber: finalOrder.orderNumber,
+      status: finalOrder.purchaseStatus === 'SUCCESS' ? 'PURCHASED' : finalOrder.purchaseStatus,
+      paymentStatus: finalOrder.paymentStatus,
+      deliveryStatus: finalOrder.deliveryStatus,
+      claimUrl: finalOrder.claimUrl,
+      explorerUrl: verificationResult.explorerUrl,
       message: 'Gift card purchased and dispatched successfully.',
     });
   } catch (error: any) {
-    console.error('[Checkout API] Unexpected error in /api/checkout/pay:', error);
+    console.error('[Checkout API] Error in /api/checkout/pay:', error.message);
     return NextResponse.json(
       {
         success: false,
         error: error.message || 'Internal checkout processing error',
       },
-      { status: 500 }
+      { status: error.status || 500 }
     );
   }
 }
