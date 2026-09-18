@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getReloadlyGiftCardById } from '@/lib/reloadly/giftcards';
+import { getOrderById } from '@/lib/orders/store';
 
 export async function GET(
   request: NextRequest,
@@ -7,25 +7,25 @@ export async function GET(
 ) {
   try {
     const { id } = await params;
-    const card = await getReloadlyGiftCardById(id);
+    // Always sanitized - strips out secureCodes (card numbers / PINs)
+    const order = await getOrderById(id, false);
 
-    if (!card) {
+    if (!order) {
       return NextResponse.json(
-        { success: false, error: `Gift card ${id} not found` },
+        { success: false, error: `Order ${id} not found` },
         { status: 404 }
       );
     }
 
     return NextResponse.json({
       success: true,
-      data: card,
+      data: order,
     });
   } catch (error: any) {
-    console.error(`[API /api/giftcards/[id]] Error fetching card:`, error);
+    console.error(`[API /api/orders/[id]] Error:`, error);
     return NextResponse.json(
-      { success: false, error: error.message || 'Internal error' },
+      { success: false, error: 'Failed to retrieve order' },
       { status: 500 }
     );
   }
 }
-

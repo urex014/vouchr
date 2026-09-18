@@ -4,7 +4,7 @@ import React, { useState } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { Zap, ShieldCheck, ArrowRight, Globe, AlertCircle } from 'lucide-react';
-import { CountryCode, GiftCardCategory } from '@/lib/giftcards/types';
+import { CountryCode, GiftCardCategory } from '@/types';
 
 export interface GiftCardProductProps {
   brand: string;
@@ -38,6 +38,8 @@ export const GiftCardProduct: React.FC<GiftCardProductProps> = ({
   discountPercentage,
 }) => {
   const [imageLoaded, setImageLoaded] = useState(false);
+  const [imageError, setImageError] = useState(false);
+  const [logoError, setLogoError] = useState(false);
   const minPrice = denominations[0] || 25;
   const isOutOfStock = availability === 'out_of_stock';
 
@@ -45,9 +47,12 @@ export const GiftCardProduct: React.FC<GiftCardProductProps> = ({
   const countryBadge = {
     US: { label: 'United States', flag: '🇺🇸', color: 'bg-blue-50 text-blue-800 border-blue-200' },
     UK: { label: 'United Kingdom', flag: '🇬🇧', color: 'bg-indigo-50 text-indigo-800 border-indigo-200' },
+    GB: { label: 'United Kingdom', flag: '🇬🇧', color: 'bg-indigo-50 text-indigo-800 border-indigo-200' },
     NG: { label: 'Nigeria', flag: '🇳🇬', color: 'bg-emerald-50 text-emerald-800 border-emerald-200' },
     EU: { label: 'Europe', flag: '🇪🇺', color: 'bg-sky-50 text-sky-800 border-sky-200' },
     KE: { label: 'Kenya', flag: '🇰🇪', color: 'bg-amber-50 text-amber-800 border-amber-200' },
+    CA: { label: 'Canada', flag: '🇨🇦', color: 'bg-red-50 text-red-800 border-red-200' },
+    AU: { label: 'Australia', flag: '🇦🇺', color: 'bg-amber-50 text-amber-800 border-amber-200' },
     GLOBAL: { label: 'Global', flag: '🌐', color: 'bg-purple-50 text-purple-800 border-purple-200' },
   }[country] || { label: country, flag: '🌐', color: 'bg-zinc-100 text-zinc-800 border-zinc-200' };
 
@@ -60,13 +65,27 @@ export const GiftCardProduct: React.FC<GiftCardProductProps> = ({
       >
         {/* Subtle breathing room padding inside the wrapper */}
         <div className="absolute inset-4 sm:inset-5 flex items-center justify-center transition-transform duration-300 group-hover:scale-105">
-          <img
-            src={giftCardImage}
-            alt={`${brand} official digital gift card artwork`}
-            className="w-full h-full object-contain filter drop-shadow-md rounded-xl"
-            loading="lazy"
-            onLoad={() => setImageLoaded(true)}
-          />
+          {giftCardImage && !imageError ? (
+            <img
+              src={giftCardImage}
+              alt={`${brand} official digital gift card artwork`}
+              className="w-full h-full object-contain filter drop-shadow-md rounded-xl"
+              loading="lazy"
+              onLoad={() => setImageLoaded(true)}
+              onError={() => setImageError(true)}
+            />
+          ) : (
+            <div className="w-full h-full rounded-xl bg-gradient-to-br from-zinc-800 to-zinc-950 p-4 flex flex-col justify-between text-white shadow-md">
+              <div className="flex justify-between items-center">
+                <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-white/20">{country}</span>
+                <span className="text-xs font-extrabold text-purple-300">{currency}</span>
+              </div>
+              <div>
+                <div className="font-extrabold text-sm">{brand}</div>
+                <div className="text-[10px] text-zinc-400">Digital Gift Card</div>
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Top Badges */}
@@ -114,11 +133,16 @@ export const GiftCardProduct: React.FC<GiftCardProductProps> = ({
 
           {/* Brand Logo thumbnail */}
           <div className="w-9 h-9 rounded-xl bg-zinc-50 border border-zinc-200 p-1.5 shrink-0 flex items-center justify-center overflow-hidden">
-            <img
-              src={brandLogo}
-              alt={`${brand} logo`}
-              className="w-full h-full object-contain"
-            />
+            {brandLogo && !logoError ? (
+              <img
+                src={brandLogo}
+                alt={`${brand} logo`}
+                className="w-full h-full object-contain"
+                onError={() => setLogoError(true)}
+              />
+            ) : (
+              <span className="text-xs font-black text-purple-700">{brand.slice(0, 2).toUpperCase()}</span>
+            )}
           </div>
         </div>
 

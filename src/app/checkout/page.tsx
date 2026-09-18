@@ -6,7 +6,6 @@ import { useRouter } from 'next/navigation';
 import { Header } from '@/components/common/Header';
 import { Footer } from '@/components/common/Footer';
 import { useVouchr } from '@/context/VouchrContext';
-import { MOCK_GIFT_CARDS } from '@/lib/giftcards/mock-provider';
 import { CartItem } from '@/types';
 import {
   ShieldCheck,
@@ -28,30 +27,40 @@ export default function CheckoutPage() {
   const router = useRouter();
   const { cart, cartTotalUSD, currency, format, createOrder } = useVouchr();
 
-  const checkoutItems: CartItem[] = cart.length > 0 ? cart : [
-    {
-      id: 'fallback-ci',
-      giftCard: MOCK_GIFT_CARDS[0], // Amazon US
-      denomination: 50,
-      quantity: 1,
-      recipientType: 'other',
-      recipientName: 'Taylor Morgan',
-      recipientEmail: 'taylor.m@example.com',
-      senderName: 'Alex Mercer',
-      message: 'Enjoy your gift!',
-      deliveryOption: 'instant',
-    }
-  ];
+  if (cart.length === 0) {
+    return (
+      <div className="min-h-screen flex flex-col bg-[#FAF9F6] text-zinc-900">
+        <Header />
+        <main className="flex-1 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20 flex flex-col items-center justify-center text-center">
+          <div className="w-20 h-20 rounded-full bg-purple-100 flex items-center justify-center text-purple-700 mb-6">
+            <Gift className="w-10 h-10" />
+          </div>
+          <h1 className="text-3xl font-black text-zinc-950 mb-3">Your gift bag is empty</h1>
+          <p className="text-zinc-600 max-w-md mb-8">
+            Choose a digital gift card from our marketplace to proceed to checkout.
+          </p>
+          <Link
+            href="/cards"
+            className="px-8 py-4 rounded-2xl bg-purple-700 hover:bg-purple-800 text-white font-extrabold text-sm shadow-xl shadow-purple-600/20 transition-all hover:scale-[1.02]"
+          >
+            Explore Gift Cards
+          </Link>
+        </main>
+        <Footer />
+      </div>
+    );
+  }
 
+  const checkoutItems: CartItem[] = cart;
   const primaryItem = checkoutItems[0];
 
   // Steps state (1: Gift card, 2: Recipient, 3: Payment, 4: Confirmation)
   const [currentStep, setCurrentStep] = useState<1 | 2 | 3 | 4>(3);
 
   // Recipient details state
-  const [recipientEmail, setRecipientEmail] = useState(primaryItem.recipientEmail || 'taylor.m@example.com');
-  const [recipientName, setRecipientName] = useState(primaryItem.recipientName || 'Taylor Morgan');
-  const [senderName, setSenderName] = useState(primaryItem.senderName || 'Alex Mercer');
+  const [recipientEmail, setRecipientEmail] = useState(primaryItem.recipientEmail || '');
+  const [recipientName, setRecipientName] = useState(primaryItem.recipientName || '');
+  const [senderName, setSenderName] = useState(primaryItem.senderName || '');
   const [personalMessage, setPersonalMessage] = useState(primaryItem.message || 'Enjoy your gift!');
 
   // Payment state
@@ -60,29 +69,63 @@ export default function CheckoutPage() {
   const [cardExpiry, setCardExpiry] = useState('12/28');
   const [cardCvc, setCardCvc] = useState('888');
 
-  // Processing state
+  // Processing & error states
   const [isProcessing, setIsProcessing] = useState(false);
   const [processingStage, setProcessingStage] = useState<string>('');
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
-  const totalUSD = cart.length > 0
-    ? cartTotalUSD
-    : primaryItem.denomination * primaryItem.quantity * (1 - (primaryItem.giftCard.discountPercentage || 0) / 100);
+  const totalUSD = cartTotalUSD;
 
-  const handlePayAndSend = () => {
+  const handlePayAndSend = async () => {
+    if (!recipientEmail || !recipientEmail.includes('@')) {
+      setCurrentStep(2);
+      setErrorMessage('Please provide a valid recipient email address.');
+      return;
+    }
+
+    setErrorMessage(null);
     setIsProcessing(true);
-    setProcessingStage('Securing transaction with provider...');
+    setProcessingStage('Verifying payment on secure server...');
 
-    setTimeout(() => {
-      setProcessingStage('Generating authentic brand digital voucher...');
-    }, 1200);
+    try {
+      const payload = {
+        paymentMethod,
+        cardDetails: paymentMethod === 'card' ? {
+          cardNumber,
+          cardExpiry,
+          cardCvc,
+        } : undefined,
+        reloadlyProductId: primaryItem.giftCard.numericId || Number(primaryItem.giftCard.id) || 101,
+        amount: primaryItem.denomination,
+        currency: primaryItem.giftCard.currency,
+        quantity: primaryItem.quantity,
+        customerEmail: 'alex.mercer@example.com',
+        recipientEmail,
+        recipientName: recipientName || 'Friend',
+        senderName: senderName || 'Alex Mercer',
+        personalMessage,
+      };
 
-    setTimeout(() => {
-      setProcessingStage('Dispatching directly to recipient inbox...');
-    }, 2200);
+      setProcessingStage('Executing Reloadly Gift Card purchase...');
 
-    setTimeout(() => {
+      const res = await fetch('/api/checkout/pay', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(payload),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok || !data.success) {
+        throw new Error(data.error || 'Checkout transaction failed. Please check payment details.');
+      }
+
+      setProcessingStage('Dispatching digital code to recipient...');
+
       const newOrder = createOrder({
-        items: checkoutItems.map(item => ({
+        items: checkoutItems.map((item) => ({
           ...item,
           recipientEmail,
           recipientName,
@@ -92,14 +135,20 @@ export default function CheckoutPage() {
         totalUSD,
         currency,
         totalInCurrency: totalUSD,
-        paymentMethod: paymentMethod === 'card' ? 'card' : paymentMethod === 'apple_pay' ? 'apple_pay' : paymentMethod === 'mobile_money' ? 'mobile_money' : 'crypto',
+        paymentMethod,
         paymentStatus: 'completed',
         deliveryStatus: 'delivered',
         deliveryTimestamp: new Date().toISOString(),
       });
 
-      router.push(`/order-success?orderId=${newOrder.id}`);
-    }, 3200);
+      const orderTargetId = data.orderId || newOrder.id;
+      router.push(`/order-success?orderId=${orderTargetId}`);
+    } catch (err: any) {
+      console.error('Checkout error:', err);
+      setErrorMessage(err.message || 'Payment or order processing failed. Please verify your details.');
+      setIsProcessing(false);
+      setProcessingStage('');
+    }
   };
 
   const stepsList = [
@@ -120,7 +169,7 @@ export default function CheckoutPage() {
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
               <div>
                 <span className="text-xs font-black uppercase tracking-widest text-[#FF5722]">
-                  Provider Direct Checkout
+                  Secure Checkout
                 </span>
                 <h1 className="text-3xl sm:text-4xl font-black text-zinc-950 tracking-tight">
                   Checkout
@@ -191,7 +240,7 @@ export default function CheckoutPage() {
                   </div>
                   <span className="text-xs font-semibold text-emerald-600 flex items-center gap-1">
                     <Zap className="w-3.5 h-3.5" />
-                    Verified Provider Asset
+                    Verified Digital Card
                   </span>
                 </div>
 
@@ -413,7 +462,7 @@ export default function CheckoutPage() {
                 )}
               </div>
 
-              {/* STEP 4: CONFIRMATION SUMMARY */}
+                {/* STEP 4: CONFIRMATION SUMMARY */}
               <div className="bg-white rounded-3xl p-6 sm:p-7 border border-zinc-200/90 shadow-sm space-y-4">
                 <div className="flex items-center gap-2">
                   <span className="w-6 h-6 rounded-full bg-purple-100 text-purple-800 text-xs font-black flex items-center justify-center">
@@ -424,10 +473,25 @@ export default function CheckoutPage() {
                   </h3>
                 </div>
 
+                {/* Actual gift card artwork preview in step 4 */}
+                <div className="p-3.5 rounded-2xl bg-[#F5F4F0] border border-zinc-200 flex items-center gap-4">
+                  <div className="w-20 h-14 bg-white rounded-xl p-1 border border-zinc-200 shadow-xs shrink-0 flex items-center justify-center overflow-hidden">
+                    <img
+                      src={primaryItem.giftCard.giftCardUrl || primaryItem.giftCard.productImage}
+                      alt={primaryItem.giftCard.brand}
+                      className="w-full h-full object-contain"
+                    />
+                  </div>
+                  <div>
+                    <h4 className="font-extrabold text-sm text-zinc-900">{primaryItem.giftCard.brand} Gift Card</h4>
+                    <span className="text-xs text-purple-700 font-black">{primaryItem.giftCard.currencySymbol}{primaryItem.denomination.toLocaleString()} {primaryItem.giftCard.currency}</span>
+                  </div>
+                </div>
+
                 <div className="p-4 rounded-2xl bg-zinc-50 border border-zinc-200 space-y-2 text-xs">
                   <div className="flex justify-between">
                     <span className="text-zinc-500">Destination:</span>
-                    <strong className="text-zinc-900">{recipientEmail}</strong>
+                    <strong className="text-zinc-900">{recipientEmail || 'Pending delivery email in step 2'}</strong>
                   </div>
                   <div className="flex justify-between">
                     <span className="text-zinc-500">Delivery Time:</span>
@@ -496,6 +560,14 @@ export default function CheckoutPage() {
                     </span>
                   </div>
                 </div>
+
+                {/* Error Banner */}
+                {errorMessage && (
+                  <div className="p-3.5 rounded-2xl bg-red-50 border border-red-200 text-red-700 text-xs font-semibold flex items-start gap-2">
+                    <span className="text-red-500 font-bold">⚠️</span>
+                    <span>{errorMessage}</span>
+                  </div>
+                )}
 
                 {/* Final Pay & Send CTA */}
                 <button

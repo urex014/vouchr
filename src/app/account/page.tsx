@@ -33,6 +33,127 @@ export default function AccountPage() {
     'gift_cards' | 'orders' | 'transactions' | 'recipients' | 'account' | 'support'
   >('gift_cards');
 
+  const DEMO_RELOADLY_ORDERS: Order[] = [
+    {
+      id: 'ord-849201',
+      orderNumber: 'VCR-US-99214',
+      createdAt: '2026-09-15T14:22:00Z',
+      items: [
+        {
+          id: 'ci-demo-1',
+          giftCard: {
+            id: '101',
+            numericId: 101,
+            brandName: 'Amazon',
+            brand: 'Amazon',
+            brandSlug: 'amazon',
+            productName: 'Amazon US',
+            brandLogo: '/brands/amazon.svg',
+            logoUrl: '/brands/amazon.svg',
+            productImage: '/giftcards/amazon-us.svg',
+            giftCardImage: '/giftcards/amazon-us.svg',
+            giftCardUrl: '/giftcards/amazon-us.svg',
+            category: 'Shopping',
+            country: 'US',
+            countryName: 'United States',
+            currency: 'USD',
+            currencySymbol: '$',
+            denominations: [25, 50, 100, 200, 500],
+            minAmount: 25,
+            maxAmount: 500,
+            fixedAmounts: [25, 50, 100, 200, 500],
+            denominationType: 'FIXED',
+            deliveryMethod: 'digital',
+            description: 'Official Amazon digital gift card.',
+            redemptionInstructions: 'Redeem at amazon.com/redeem',
+            terms: 'Valid only in US.',
+            isAvailable: true,
+            available: true,
+            availability: 'in_stock',
+            global: false,
+          },
+          denomination: 50,
+          quantity: 1,
+          recipientType: 'other',
+          recipientName: 'Sarah Chen',
+          recipientEmail: 'sarah.chen@example.com',
+          senderName: 'Alex Mercer',
+          deliveryOption: 'instant',
+        },
+      ],
+      totalUSD: 50,
+      currency: 'USD',
+      totalInCurrency: 50,
+      paymentMethod: 'card',
+      paymentStatus: 'completed',
+      deliveryStatus: 'delivered',
+      deliveryTimestamp: '2026-09-15T14:22:18Z',
+      voucherCode: 'AMZN-8921-4412-9901',
+      pinCode: '4491',
+      claimUrl: 'https://vouchr.com/claim/vcr-us-99214',
+    },
+    {
+      id: 'ord-849202',
+      orderNumber: 'VCR-GLOBAL-99182',
+      createdAt: '2026-09-08T09:10:00Z',
+      items: [
+        {
+          id: 'ci-demo-2',
+          giftCard: {
+            id: '103',
+            numericId: 103,
+            brandName: 'Spotify',
+            brand: 'Spotify',
+            brandSlug: 'spotify',
+            productName: 'Spotify Premium Global',
+            brandLogo: '/brands/spotify.svg',
+            logoUrl: '/brands/spotify.svg',
+            productImage: '/giftcards/spotify-global.svg',
+            giftCardImage: '/giftcards/spotify-global.svg',
+            giftCardUrl: '/giftcards/spotify-global.svg',
+            category: 'Entertainment',
+            country: 'GLOBAL',
+            countryName: 'Global',
+            currency: 'USD',
+            currencySymbol: '$',
+            denominations: [10, 30, 60, 100],
+            minAmount: 10,
+            maxAmount: 100,
+            fixedAmounts: [10, 30, 60, 100],
+            denominationType: 'FIXED',
+            deliveryMethod: 'digital',
+            description: 'Official Spotify digital gift card.',
+            redemptionInstructions: 'Redeem at spotify.com/redeem',
+            terms: 'Valid globally.',
+            isAvailable: true,
+            available: true,
+            availability: 'in_stock',
+            global: true,
+          },
+          denomination: 30,
+          quantity: 1,
+          recipientType: 'other',
+          recipientName: 'Kofi Mensah',
+          recipientEmail: 'kofi.mensah@example.com',
+          senderName: 'Alex Mercer',
+          deliveryOption: 'instant',
+        },
+      ],
+      totalUSD: 30,
+      currency: 'USD',
+      totalInCurrency: 30,
+      paymentMethod: 'card',
+      paymentStatus: 'completed',
+      deliveryStatus: 'delivered',
+      deliveryTimestamp: '2026-09-08T09:10:14Z',
+      voucherCode: 'SPOT-3391-7721-0021',
+      pinCode: '7721',
+      claimUrl: 'https://vouchr.com/claim/vcr-global-99182',
+    },
+  ];
+
+  const displayOrders = orders.length > 0 ? orders : DEMO_RELOADLY_ORDERS;
+
   const [isAddRecipientOpen, setIsAddRecipientOpen] = useState(false);
   const [newRecName, setNewRecName] = useState('');
   const [newRecEmail, setNewRecEmail] = useState('');
@@ -139,12 +260,12 @@ export default function AccountPage() {
                   </p>
                 </div>
                 <span className="text-xs font-bold text-zinc-500">
-                  {orders.length} digital vouchers
+                  {displayOrders.length} digital vouchers
                 </span>
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {orders.map((order) => {
+                {displayOrders.map((order) => {
                   const item = order.items[0];
                   return (
                     <div
@@ -215,7 +336,7 @@ export default function AccountPage() {
               <h2 className="text-xl font-black text-zinc-950 mb-2">Order History</h2>
               <div className="bg-white rounded-3xl border border-zinc-200/90 overflow-hidden shadow-sm">
                 <div className="divide-y divide-zinc-100">
-                  {orders.map((order) => {
+                  {displayOrders.map((order) => {
                     const item = order.items[0];
                     return (
                       <div key={order.id} className="p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
@@ -276,7 +397,7 @@ export default function AccountPage() {
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-zinc-100">
-                    {orders.map((o) => (
+                    {displayOrders.map((o) => (
                       <tr key={o.id} className="hover:bg-zinc-50/50">
                         <td className="p-4 font-mono font-bold text-zinc-900">{o.orderNumber}</td>
                         <td className="p-4 font-semibold text-zinc-800">{o.items[0]?.giftCard.brand}</td>
@@ -395,7 +516,7 @@ export default function AccountPage() {
             <div className="max-w-2xl bg-white rounded-3xl p-6 sm:p-8 border border-zinc-200/90 shadow-sm space-y-4">
               <h2 className="text-xl font-black text-zinc-900">Concierge Help</h2>
               <p className="text-xs text-zinc-600 leading-relaxed">
-                Need help with a delivered card or have a question about provider redemption?
+                Need help with a delivered card or have a question about redeeming your gift card?
               </p>
               <div className="pt-2 flex items-center gap-3">
                 <Link

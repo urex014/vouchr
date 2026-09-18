@@ -1,6 +1,10 @@
-import { ProviderGiftCard, CountryCode, GiftCardCategory as ProviderCategory } from '@/lib/giftcards/types';
+import { NormalizedGiftCard, ReloadlyProductFilter } from '@/lib/reloadly/types';
 
-export type GiftCardCategory = 
+export type GiftCard = NormalizedGiftCard;
+export type ProviderGiftCard = NormalizedGiftCard;
+export type { ReloadlyProductFilter };
+
+export type GiftCardCategory =
   | 'Shopping'
   | 'Gaming'
   | 'Entertainment'
@@ -9,14 +13,13 @@ export type GiftCardCategory =
   | 'Subscriptions'
   | 'Lifestyle'
   | 'Digital Services'
-  | 'all'
-  | 'gaming'
-  | 'entertainment'
-  | 'shopping'
-  | 'food'
-  | 'travel'
-  | 'lifestyle'
-  | 'subscriptions';
+  | 'Fashion'
+  | 'Department Store'
+  | 'Sports'
+  | 'Beauty'
+  | 'All';
+
+export type CountryCode = string;
 
 export type CurrencyCode = 'USD' | 'EUR' | 'GBP' | 'NGN' | 'KES';
 
@@ -28,43 +31,9 @@ export interface CurrencyConfig {
   rateAgainstUSD: number;
 }
 
-export interface GiftCard {
-  id: string;
-  slug?: string;
-  brand: string;
-  brandSlug?: string;
-  tagline?: string;
-  description: string;
-  category: any;
-  denominations: number[];
-  minCustomAmount?: number;
-  maxCustomAmount?: number;
-  region?: string;
-  country?: string;
-  regionsSupported?: string[];
-  discountPercentage?: number;
-  isPopular?: boolean;
-  isFeatured?: boolean;
-  isTrending?: boolean;
-  isNew?: boolean;
-  cardTheme?: {
-    bgGradient: string;
-    textColor: string;
-    accentColor: string;
-    pattern?: string;
-    badgeBg: string;
-  };
-  logoUrl: string;
-  giftCardUrl?: string;
-  redemptionSteps?: string[];
-  termsAndConditions?: string[];
-  rating?: number;
-  reviewsCount?: number;
-}
-
 export interface CartItem {
   id: string;
-  giftCard: ProviderGiftCard;
+  giftCard: GiftCard;
   denomination: number;
   quantity: number;
   recipientType: 'other' | 'self';

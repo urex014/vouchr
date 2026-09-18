@@ -1,28 +1,59 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { MOCK_GIFT_CARDS } from '@/lib/giftcards/mock-provider';
+import { GiftCard } from '@/types';
 import { GiftCardProduct } from '@/components/cards/GiftCardProduct';
-import { GiftCardCategory } from '@/lib/giftcards/types';
-import { ArrowRight, Flame } from 'lucide-react';
+import { ArrowRight, Flame, Sparkles } from 'lucide-react';
 
 export const PopularCardsSection: React.FC = () => {
-  const [activeCategory, setActiveCategory] = useState<GiftCardCategory | 'All'>('All');
+  const [cards, setCards] = useState<GiftCard[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [activeCategory, setActiveCategory] = useState<string>('All');
 
-  const filteredCards = MOCK_GIFT_CARDS.filter((card) => {
-    if (activeCategory === 'All') return card.isPopular;
-    return card.category === activeCategory;
-  }).slice(0, 8);
+  useEffect(() => {
+    let active = true;
+    async function loadCards() {
+      try {
+        const res = await fetch('/api/giftcards');
+        if (res.ok) {
+          const json = await res.json();
+          if (active && Array.isArray(json.data)) {
+            setCards(json.data.filter((c: GiftCard) => c.available));
+          }
+        }
+      } catch (err) {
+        console.warn('Failed to load popular cards:', err);
+      } finally {
+        if (active) setLoading(false);
+      }
+    }
+    loadCards();
+    return () => {
+      active = false;
+    };
+  }, []);
 
-  const tabs: { label: string; value: GiftCardCategory | 'All' }[] = [
-    { label: '🔥 Most Popular', value: 'All' },
+  const filteredCards = cards
+    .filter((card) => {
+      if (activeCategory === 'All') return true;
+      return card.category?.toLowerCase() === activeCategory.toLowerCase();
+    })
+    .slice(0, 8);
+
+  const tabs: { label: string; value: string }[] = [
+    { label: '🔥 All Cards', value: 'All' },
     { label: 'Shopping', value: 'Shopping' },
     { label: 'Gaming', value: 'Gaming' },
     { label: 'Entertainment', value: 'Entertainment' },
     { label: 'Food', value: 'Food' },
     { label: 'Travel', value: 'Travel' },
   ];
+
+  // If loading and no cards, or if no cards available
+  if (!loading && cards.length === 0) {
+    return null;
+  }
 
   return (
     <section className="py-20 bg-[#FAF9F6]">
@@ -60,26 +91,40 @@ export const PopularCardsSection: React.FC = () => {
         </div>
 
         {/* Product Cards Grid with real gift card artwork */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-          {filteredCards.map((card) => (
-            <GiftCardProduct
-              key={card.id}
-              productId={card.id}
-              brand={card.brand}
-              brandLogo={card.logoUrl}
-              giftCardImage={card.giftCardUrl}
-              denominations={card.denominations}
-              currency={card.currency}
-              currencySymbol={card.currencySymbol}
-              country={card.country}
-              countryName={card.countryName}
-              category={card.category}
-              availability={card.availability}
-              deliveryMethod={card.deliveryMethod}
-              discountPercentage={card.discountPercentage}
-            />
-          ))}
-        </div>
+        {loading ? (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 animate-pulse">
+            {[1, 2, 3, 4].map((n) => (
+              <div key={n} className="h-80 bg-white rounded-3xl border border-zinc-200 p-6" />
+            ))}
+          </div>
+        ) : filteredCards.length > 0 ? (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+            {filteredCards.map((card) => (
+              <GiftCardProduct
+                key={card.id}
+                productId={card.id}
+                brand={card.brand}
+                brandLogo={card.logoUrl}
+                giftCardImage={card.giftCardUrl}
+                denominations={card.denominations || [25, 50, 100]}
+                currency={card.currency || 'USD'}
+                currencySymbol={card.currencySymbol || '$'}
+                country={card.country || 'GLOBAL'}
+                countryName={card.countryName}
+                category={card.category as any}
+                availability={card.availability}
+                deliveryMethod={card.deliveryMethod as any}
+                discountPercentage={card.discountPercentage}
+              />
+            ))}
+          </div>
+        ) : (
+          <div className="py-12 text-center bg-white rounded-3xl border border-zinc-200 p-8 max-w-md mx-auto space-y-3">
+            <Sparkles className="w-8 h-8 text-purple-600 mx-auto" />
+            <h3 className="font-extrabold text-lg text-zinc-900">No cards in this category yet</h3>
+            <p className="text-xs text-zinc-500">Explore all other categories in our marketplace.</p>
+          </div>
+        )}
 
         {/* View All CTA */}
         <div className="mt-12 text-center">
@@ -87,7 +132,7 @@ export const PopularCardsSection: React.FC = () => {
             href="/cards"
             className="inline-flex items-center gap-2 px-8 py-4 rounded-2xl bg-white hover:bg-zinc-50 text-zinc-900 border-2 border-zinc-200 font-extrabold text-sm shadow-sm hover:border-purple-400 transition-all hover:scale-[1.02]"
           >
-            <span>Explore all {MOCK_GIFT_CARDS.length} brands in marketplace</span>
+            <span>Explore all {cards.length > 0 ? `${cards.length} brands` : 'gift cards'} in marketplace</span>
             <ArrowRight className="w-4 h-4 text-purple-700" />
           </Link>
         </div>

@@ -2,9 +2,7 @@
 
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { CartItem, CurrencyCode, Order, SavedRecipient } from '@/types';
-import { ProviderGiftCard } from '@/lib/giftcards/types';
 import { CURRENCIES, formatPrice } from '@/data/currencies';
-import { MOCK_GIFT_CARDS } from '@/lib/giftcards/mock-provider';
 
 interface VouchrContextType {
   currency: CurrencyCode;
@@ -34,92 +32,12 @@ const INITIAL_RECIPIENTS: SavedRecipient[] = [
     relationship: 'Best Friend',
     occasion: 'Birthday',
     occasionDate: '2026-10-04',
-    favoriteBrands: ['Spotify', 'Airbnb', 'Starbucks'],
-    totalGiftsSent: 4,
-  },
-  {
-    id: 'rec-2',
-    name: 'Kofi Mensah',
-    email: 'kofi.mensah@example.com',
-    phone: '+234 803 123 4567',
-    relationship: 'Colleague',
-    occasion: 'Promotion Celebration',
-    occasionDate: '2026-09-28',
-    favoriteBrands: ['PlayStation', 'Steam', 'Uber'],
-    totalGiftsSent: 2,
-  },
-  {
-    id: 'rec-3',
-    name: 'Elena Rostova',
-    email: 'elena.rostova@example.com',
-    relationship: 'Sister',
-    occasion: 'Graduation',
-    occasionDate: '2026-11-15',
-    favoriteBrands: ['Apple', 'Nike'],
-    totalGiftsSent: 3,
+    favoriteBrands: [],
+    totalGiftsSent: 0,
   },
 ];
 
-const INITIAL_ORDERS: Order[] = [
-  {
-    id: 'ord-849201',
-    orderNumber: 'VCR-US-99214',
-    createdAt: '2026-09-15T14:22:00Z',
-    items: [
-      {
-        id: 'ci-1',
-        giftCard: MOCK_GIFT_CARDS[0], // Amazon US
-        denomination: 50,
-        quantity: 1,
-        recipientType: 'other',
-        recipientName: 'Sarah Chen',
-        recipientEmail: 'sarah.chen@example.com',
-        senderName: 'Alex Mercer',
-        message: 'Happy early birthday Sarah! Pick something awesome on Amazon.',
-        deliveryOption: 'instant',
-      },
-    ],
-    totalUSD: 50,
-    currency: 'USD',
-    totalInCurrency: 50,
-    paymentMethod: 'apple_pay',
-    paymentStatus: 'completed',
-    deliveryStatus: 'delivered',
-    deliveryTimestamp: '2026-09-15T14:22:18Z',
-    voucherCode: 'AMZN-9942-8812-7491',
-    pinCode: '8839',
-    claimUrl: 'https://vouchr.com/claim/vcr-us-99214',
-  },
-  {
-    id: 'ord-849202',
-    orderNumber: 'VCR-GLOBAL-99182',
-    createdAt: '2026-09-08T09:10:00Z',
-    items: [
-      {
-        id: 'ci-2',
-        giftCard: MOCK_GIFT_CARDS[2], // Spotify Global
-        denomination: 30,
-        quantity: 1,
-        recipientType: 'other',
-        recipientName: 'Kofi Mensah',
-        recipientEmail: 'kofi.mensah@example.com',
-        senderName: 'Alex Mercer',
-        message: 'Enjoy the music tunes brother!',
-        deliveryOption: 'instant',
-      },
-    ],
-    totalUSD: 30,
-    currency: 'USD',
-    totalInCurrency: 30,
-    paymentMethod: 'card',
-    paymentStatus: 'completed',
-    deliveryStatus: 'delivered',
-    deliveryTimestamp: '2026-09-08T09:10:14Z',
-    voucherCode: 'SPOT-7731-9024-1148',
-    pinCode: '4410',
-    claimUrl: 'https://vouchr.com/claim/vcr-global-99182',
-  },
-];
+const INITIAL_ORDERS: Order[] = [];
 
 const VouchrContext = createContext<VouchrContextType | undefined>(undefined);
 

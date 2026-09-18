@@ -1,13 +1,12 @@
 'use client';
 
-import React, { useState, useMemo, Suspense } from 'react';
+import React, { useState, useMemo, useEffect, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { Header } from '@/components/common/Header';
 import { Footer } from '@/components/common/Footer';
 import { CartDrawer } from '@/components/common/CartDrawer';
 import { GiftCardProduct } from '@/components/cards/GiftCardProduct';
-import { MOCK_GIFT_CARDS, MOCK_BRANDS } from '@/lib/giftcards/mock-provider';
-import { GiftCardCategory, CountryCode } from '@/lib/giftcards/types';
+import { GiftCard, GiftCardCategory } from '@/types';
 import {
   Search,
   Globe,
@@ -19,9 +18,11 @@ import {
   Tag,
   Check,
   Percent,
+  RefreshCw,
+  AlertCircle,
 } from 'lucide-react';
 
-const CATEGORIES: { id: GiftCardCategory | 'All'; name: string; icon: string }[] = [
+const CATEGORIES: { id: string; name: string; icon: string }[] = [
   { id: 'All', name: 'All Cards', icon: 'Sparkles' },
   { id: 'Shopping', name: 'Shopping', icon: 'ShoppingBag' },
   { id: 'Gaming', name: 'Gaming', icon: 'Gamepad2' },
@@ -44,86 +45,167 @@ const SECTIONS = [
   { id: 'recently_added', label: '✨ Recently Added' },
 ];
 
-const REGIONS: { id: CountryCode | 'ALL'; name: string; flag: string }[] = [
-  { id: 'ALL', name: 'All Regions', flag: '🌍' },
-  { id: 'US', name: 'United States', flag: '🇺🇸' },
-  { id: 'UK', name: 'United Kingdom', flag: '🇬🇧' },
-  { id: 'NG', name: 'Nigeria', flag: '🇳🇬' },
-  { id: 'EU', name: 'Europe', flag: '🇪🇺' },
-  { id: 'GLOBAL', name: 'Global / Worldwide', flag: '🌐' },
-];
+const COUNTRY_FLAGS: Record<string, string> = {
+  ALL: '🌍',
+  US: '🇺🇸',
+  GB: '🇬🇧',
+  UK: '🇬🇧',
+  NG: '🇳🇬',
+  EU: '🇪🇺',
+  KE: '🇰🇪',
+  CA: '🇨🇦',
+  AU: '🇦🇺',
+  GLOBAL: '🌐',
+};
 
 function MarketplaceCatalog() {
   const searchParams = useSearchParams();
-  const initialCategory = (searchParams.get('category') as GiftCardCategory) || 'All';
+  const initialCategory = searchParams.get('category') || 'All';
   const initialBrand = searchParams.get('brand') || 'all';
 
+  const [cards, setCards] = useState<GiftCard[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
   const [searchQuery, setSearchQuery] = useState('');
-  const [selectedCategory, setSelectedCategory] = useState<GiftCardCategory | 'All'>(initialCategory);
-  const [selectedRegion, setSelectedRegion] = useState<CountryCode | 'ALL'>('ALL');
+  const [selectedCategory, setSelectedCategory] = useState<string>(initialCategory);
+  const [selectedRegion, setSelectedRegion] = useState<string>('ALL');
   const [selectedBrand, setSelectedBrand] = useState<string>(initialBrand);
   const [activeSection, setActiveSection] = useState<string>('all');
   const [onlyDeals, setOnlyDeals] = useState(false);
   const [sortBy, setSortBy] = useState<'popular' | 'price_asc' | 'price_desc' | 'brand_asc'>('popular');
 
-  // Filtered Cards
+  // Load catalog from server-side data layer
+  const fetchCatalog = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      const res = await fetch('/api/giftcards');
+      if (!res.ok) {
+        throw new Error(`Catalog service responded with status ${res.status}`);
+      }
+      const json = await res.json();
+      if (json.success && Array.isArray(json.data)) {
+        setCards(json.data);
+      } else {
+        setCards([]);
+      }
+    } catch (err: any) {
+      console.error('Failed to load gift cards:', err);
+      setError(err.message || 'Failed to load gift card catalog');
+      setCards([]);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchCatalog();
+  }, []);
+
+  // Derive available brands dynamically from active cards
+  const availableBrands = useMemo(() => {
+    const map = new Map<string, string>();
+    for (const card of cards) {
+      if (card.brandSlug && !map.has(card.brandSlug)) {
+        map.set(card.brandSlug, card.brandName);
+      }
+    }
+    return Array.from(map.entries())
+      .map(([slug, name]) => ({ slug, name }))
+      .sort((a, b) => a.name.localeCompare(b.name));
+  }, [cards]);
+
+  // Derive available regions dynamically from active cards
+  const availableRegions = useMemo(() => {
+    const set = new Set<string>();
+    for (const card of cards) {
+      if (card.country) set.add(card.country.toUpperCase());
+    }
+    const list = Array.from(set).map((code) => ({
+      id: code,
+      name: code === 'GLOBAL' ? 'Global' : code,
+      flag: COUNTRY_FLAGS[code] || '🌍',
+    }));
+    return [{ id: 'ALL', name: 'All Regions', flag: '🌍' }, ...list];
+  }, [cards]);
+
+  // Filtered Cards strictly from catalog response
   const filteredCards = useMemo(() => {
-    return MOCK_GIFT_CARDS.filter((card) => {
-      // Category
-      if (selectedCategory !== 'All' && card.category !== selectedCategory) {
-        return false;
-      }
-
-      // Region / Country
-      if (selectedRegion !== 'ALL') {
-        if (card.country !== selectedRegion && card.country !== 'GLOBAL') {
+    return cards
+      .filter((card) => {
+        // Must be in stock and available
+        if (!card.available || card.availability === 'out_of_stock') {
           return false;
         }
-      }
 
-      // Brand filter
-      if (selectedBrand !== 'all') {
-        if (card.brandSlug.toLowerCase() !== selectedBrand.toLowerCase()) {
+        // Category filter
+        if (selectedCategory !== 'All' && selectedCategory !== 'all') {
+          if (card.category?.toLowerCase() !== selectedCategory.toLowerCase()) {
+            return false;
+          }
+        }
+
+        // Region / Country filter
+        if (selectedRegion !== 'ALL') {
+          const cardCountry = (card.country || '').toUpperCase();
+          if (cardCountry !== selectedRegion && cardCountry !== 'GLOBAL') {
+            return false;
+          }
+        }
+
+        // Brand filter
+        if (selectedBrand !== 'all') {
+          if (card.brandSlug.toLowerCase() !== selectedBrand.toLowerCase()) {
+            return false;
+          }
+        }
+
+        // Section tag filter
+        if (activeSection !== 'all') {
+          if (activeSection === 'popular' && !card.isPopular) return false;
+          if (activeSection === 'trending' && !card.isTrending) return false;
+          if (activeSection === 'bestsellers' && !card.isBestSeller) return false;
+          if (activeSection === 'gaming' && card.category !== 'Gaming') return false;
+          if (activeSection === 'shopping' && card.category !== 'Shopping') return false;
+          if (activeSection === 'entertainment' && card.category !== 'Entertainment') return false;
+          if (activeSection === 'recently_added' && !card.isRecentlyAdded) return false;
+        }
+
+        // Deals filter
+        if (onlyDeals && (!card.discountPercentage || card.discountPercentage <= 0)) {
           return false;
         }
-      }
 
-      // Section tag filter
-      if (activeSection !== 'all') {
-        if (activeSection === 'popular' && !card.isPopular) return false;
-        if (activeSection === 'trending' && !card.isTrending) return false;
-        if (activeSection === 'bestsellers' && !card.isBestSeller) return false;
-        if (activeSection === 'gaming' && card.category !== 'Gaming') return false;
-        if (activeSection === 'shopping' && card.category !== 'Shopping') return false;
-        if (activeSection === 'entertainment' && card.category !== 'Entertainment') return false;
-        if (activeSection === 'recently_added' && !card.isRecentlyAdded) return false;
-      }
-
-      // Deals
-      if (onlyDeals && (!card.discountPercentage || card.discountPercentage <= 0)) {
-        return false;
-      }
-
-      // Search Query
-      if (searchQuery.trim() !== '') {
-        const q = searchQuery.toLowerCase();
-        const matchesBrand = card.brand.toLowerCase().includes(q);
-        const matchesCategory = card.category.toLowerCase().includes(q);
-        const matchesCountry = card.countryName.toLowerCase().includes(q);
-        const matchesDesc = card.description.toLowerCase().includes(q);
-        if (!matchesBrand && !matchesCategory && !matchesCountry && !matchesDesc) {
-          return false;
+        // Live Search query against active products
+        if (searchQuery.trim() !== '') {
+          const q = searchQuery.toLowerCase();
+          const matchesBrand = card.brandName.toLowerCase().includes(q);
+          const matchesCategory = (card.category || '').toLowerCase().includes(q);
+          const matchesCountry = (card.countryName || card.country || '').toLowerCase().includes(q);
+          const matchesDesc = (card.description || '').toLowerCase().includes(q);
+          if (!matchesBrand && !matchesCategory && !matchesCountry && !matchesDesc) {
+            return false;
+          }
         }
-      }
 
-      return true;
-    }).sort((a, b) => {
-      if (sortBy === 'price_asc') return a.denominations[0] - b.denominations[0];
-      if (sortBy === 'price_desc') return b.denominations[0] - a.denominations[0];
-      if (sortBy === 'brand_asc') return a.brand.localeCompare(b.brand);
-      return 0; // default order
-    });
-  }, [searchQuery, selectedCategory, selectedRegion, selectedBrand, activeSection, onlyDeals, sortBy]);
+        return true;
+      })
+      .sort((a, b) => {
+        if (sortBy === 'price_asc') {
+          const aMin = a.denominations?.[0] || 0;
+          const bMin = b.denominations?.[0] || 0;
+          return aMin - bMin;
+        }
+        if (sortBy === 'price_desc') {
+          const aMin = a.denominations?.[0] || 0;
+          const bMin = b.denominations?.[0] || 0;
+          return bMin - aMin;
+        }
+        if (sortBy === 'brand_asc') return a.brandName.localeCompare(b.brandName);
+        return 0; // default order
+      });
+  }, [cards, searchQuery, selectedCategory, selectedRegion, selectedBrand, activeSection, onlyDeals, sortBy]);
 
   const resetAll = () => {
     setSearchQuery('');
@@ -150,13 +232,13 @@ function MarketplaceCatalog() {
         <div>
           <div className="inline-flex items-center gap-1.5 text-xs font-black uppercase tracking-widest text-[#FF5722] mb-2">
             <Sparkles className="w-3.5 h-3.5" />
-            Official Brand Catalog
+            Verified Gift Cards
           </div>
           <h1 className="text-3xl sm:text-4xl lg:text-5xl font-black text-zinc-950 tracking-tight">
             Digital Gift Card Marketplace
           </h1>
           <p className="text-zinc-600 text-sm sm:text-base mt-1.5">
-            Authentic digital gift cards from authorized provider networks. Real artwork, instant delivery.
+            Instant digital gift cards from top brands worldwide.
           </p>
         </div>
 
@@ -167,7 +249,7 @@ function MarketplaceCatalog() {
             type="text"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder="Search Amazon, Apple, Netflix, Steam..."
+            placeholder="Search brands, regions, categories..."
             className="w-full pl-10 pr-9 py-3 rounded-2xl bg-white border border-zinc-200 text-sm font-medium focus:border-purple-600 focus:outline-none focus:ring-2 focus:ring-purple-100 shadow-xs"
           />
           {searchQuery && (
@@ -230,9 +312,9 @@ function MarketplaceCatalog() {
                 onChange={(e) => setSelectedBrand(e.target.value)}
                 className="bg-zinc-50 border border-zinc-200 rounded-xl px-3 py-1.5 text-xs font-semibold text-zinc-800 focus:outline-none focus:border-purple-600 cursor-pointer"
               >
-                <option value="all">All Brands ({MOCK_BRANDS.length})</option>
-                {MOCK_BRANDS.map((b) => (
-                  <option key={b.id} value={b.slug}>
+                <option value="all">All Brands ({availableBrands.length})</option>
+                {availableBrands.map((b) => (
+                  <option key={b.slug} value={b.slug}>
                     {b.name}
                   </option>
                 ))}
@@ -244,10 +326,10 @@ function MarketplaceCatalog() {
               <span className="text-xs font-bold text-zinc-500">Region:</span>
               <select
                 value={selectedRegion}
-                onChange={(e) => setSelectedRegion(e.target.value as any)}
+                onChange={(e) => setSelectedRegion(e.target.value)}
                 className="bg-zinc-50 border border-zinc-200 rounded-xl px-3 py-1.5 text-xs font-semibold text-zinc-800 focus:outline-none focus:border-purple-600 cursor-pointer"
               >
-                {REGIONS.map((r) => (
+                {availableRegions.map((r) => (
                   <option key={r.id} value={r.id}>
                     {r.flag} {r.name}
                   </option>
@@ -307,12 +389,26 @@ function MarketplaceCatalog() {
       <div className="mb-8 p-3.5 rounded-2xl bg-amber-50/80 border border-amber-200 text-xs text-amber-900 flex items-center gap-2">
         <Globe className="w-4 h-4 text-amber-600 shrink-0" />
         <span>
-          <strong>Region Notice:</strong> Gift card redemption is region-locked by each brand. Ensure you choose the correct country (e.g. US cards for US accounts, Nigeria cards for Nigerian accounts).
+          <strong>Region Notice:</strong> Gift card redemption is country-specific. Ensure you choose the correct country (e.g. US cards for US accounts, UK cards for UK accounts).
         </span>
       </div>
 
-      {/* Product Cards Grid using the reusable GiftCardProduct component */}
-      {filteredCards.length > 0 ? (
+      {/* Loading Skeleton State */}
+      {loading ? (
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 animate-pulse">
+          {[1, 2, 3, 4, 5, 6, 7, 8].map((n) => (
+            <div key={n} className="h-80 bg-white rounded-3xl border border-zinc-200 p-6 flex flex-col justify-between">
+              <div className="w-full h-40 bg-zinc-100 rounded-2xl" />
+              <div className="space-y-2">
+                <div className="h-3 w-16 bg-zinc-100 rounded" />
+                <div className="h-5 w-32 bg-zinc-100 rounded" />
+              </div>
+              <div className="h-4 w-24 bg-zinc-100 rounded" />
+            </div>
+          ))}
+        </div>
+      ) : filteredCards.length > 0 ? (
+        /* Product Cards Grid */
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
           {filteredCards.map((card) => (
             <GiftCardProduct
@@ -321,20 +417,39 @@ function MarketplaceCatalog() {
               brand={card.brand}
               brandLogo={card.logoUrl}
               giftCardImage={card.giftCardUrl}
-              denominations={card.denominations}
-              currency={card.currency}
-              currencySymbol={card.currencySymbol}
-              country={card.country}
+              denominations={card.denominations || [25, 50, 100]}
+              currency={card.currency || 'USD'}
+              currencySymbol={card.currencySymbol || '$'}
+              country={card.country || 'GLOBAL'}
               countryName={card.countryName}
-              category={card.category}
+              category={card.category as any}
               availability={card.availability}
-              deliveryMethod={card.deliveryMethod}
+              deliveryMethod={card.deliveryMethod as any}
               discountPercentage={card.discountPercentage}
             />
           ))}
         </div>
+      ) : cards.length === 0 ? (
+        /* Empty Catalog State */
+        <div className="py-20 text-center bg-white rounded-3xl border border-zinc-200 p-8 max-w-lg mx-auto space-y-4 shadow-sm">
+          <div className="w-16 h-16 rounded-full bg-purple-50 text-purple-600 flex items-center justify-center mx-auto">
+            <AlertCircle className="w-8 h-8" />
+          </div>
+          <h3 className="text-xl font-extrabold text-zinc-900">No Gift Cards Currently Available</h3>
+          <p className="text-xs text-zinc-500 leading-relaxed max-w-md mx-auto">
+            Our digital gift card inventory updates dynamically. Please check back shortly or refresh the catalog.
+          </p>
+          <button
+            type="button"
+            onClick={fetchCatalog}
+            className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-purple-700 text-white font-bold text-xs hover:bg-purple-800 transition shadow-sm"
+          >
+            <RefreshCw className="w-3.5 h-3.5" />
+            <span>Refresh Catalog</span>
+          </button>
+        </div>
       ) : (
-        /* Empty State */
+        /* Filter Empty State */
         <div className="py-20 text-center bg-white rounded-3xl border border-zinc-200 p-8 max-w-md mx-auto space-y-4">
           <div className="w-16 h-16 rounded-full bg-purple-50 text-purple-600 flex items-center justify-center mx-auto">
             <Search className="w-8 h-8" />

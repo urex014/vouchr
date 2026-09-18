@@ -1,25 +1,45 @@
 'use client';
 
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { MOCK_GIFT_CARDS } from '@/lib/giftcards/mock-provider';
-import { Sparkles, ArrowRight, Zap, ShieldCheck, Heart, Globe } from 'lucide-react';
+import { GiftCard } from '@/types';
+import { Sparkles, ArrowRight, Zap, ShieldCheck, Heart, Globe, Gift } from 'lucide-react';
 
 export const HeroSection: React.FC = () => {
-  const heroCard1 = MOCK_GIFT_CARDS.find((c) => c.id === 'amazon-us') || MOCK_GIFT_CARDS[0];
-  const heroCard2 = MOCK_GIFT_CARDS.find((c) => c.id === 'apple-us') || MOCK_GIFT_CARDS[1];
-  const heroCard3 = MOCK_GIFT_CARDS.find((c) => c.id === 'spotify-global') || MOCK_GIFT_CARDS[2];
+  const [cards, setCards] = useState<GiftCard[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  const popularBrands = [
-    { name: 'Amazon', id: 'amazon-us' },
-    { name: 'Apple', id: 'apple-us' },
-    { name: 'Spotify', id: 'spotify-global' },
-    { name: 'PlayStation', id: 'playstation-us' },
-    { name: 'Steam', id: 'steam-global' },
-    { name: 'Uber', id: 'uber-us' },
-    { name: 'Nike', id: 'nike-us' },
-    { name: 'Jumia', id: 'jumia-ng' },
-  ];
+  useEffect(() => {
+    let active = true;
+    async function loadHeroCards() {
+      try {
+        const res = await fetch('/api/giftcards');
+        if (res.ok) {
+          const json = await res.json();
+          if (active && Array.isArray(json.data)) {
+            setCards(json.data.filter((c: GiftCard) => c.available));
+          }
+        }
+      } catch (err) {
+        console.warn('Hero section could not fetch cards:', err);
+      } finally {
+        if (active) setLoading(false);
+      }
+    }
+    loadHeroCards();
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  const heroCard1 = cards[0];
+  const heroCard2 = cards[1];
+  const heroCard3 = cards[2];
+
+  const popularBrands = cards.slice(0, 6).map((c) => ({
+    name: c.brandName,
+    id: c.id,
+  }));
 
   return (
     <section className="relative overflow-hidden bg-gradient-to-b from-[#FAF9F6] via-white to-[#FAF9F6] pt-12 pb-20 lg:pt-16 lg:pb-28">
@@ -63,7 +83,7 @@ export const HeroSection: React.FC = () => {
 
             {/* Supporting Subtext */}
             <p className="text-base sm:text-lg text-zinc-600 font-normal leading-relaxed max-w-xl mx-auto lg:mx-0">
-              Pick a card. Write your message. Sent straight to their phone and inbox in 60 seconds. Official brand artwork, verified provider codes, zero markups.
+              Pick a card. Write your message. Sent straight to their phone and inbox in 60 seconds. Official brand cards, verified digital codes, zero markups.
             </p>
 
             {/* Action Buttons */}
@@ -76,32 +96,44 @@ export const HeroSection: React.FC = () => {
                 <ArrowRight className="w-5 h-5" />
               </Link>
 
-              <Link
-                href="/cards/amazon-us"
-                className="w-full sm:w-auto px-7 py-4 rounded-2xl bg-white hover:bg-zinc-50 text-zinc-900 border-2 border-zinc-200/90 font-extrabold text-base flex items-center justify-center gap-2 transition hover:border-purple-300"
-              >
-                <Heart className="w-4 h-4 text-[#FF5722]" />
-                <span>Send Amazon Gift Card</span>
-              </Link>
+              {heroCard1 ? (
+                <Link
+                  href={`/cards/${heroCard1.id}`}
+                  className="w-full sm:w-auto px-7 py-4 rounded-2xl bg-white hover:bg-zinc-50 text-zinc-900 border-2 border-zinc-200/90 font-extrabold text-base flex items-center justify-center gap-2 transition hover:border-purple-300"
+                >
+                  <Heart className="w-4 h-4 text-[#FF5722]" />
+                  <span>Send {heroCard1.brandName} Card</span>
+                </Link>
+              ) : (
+                <Link
+                  href="/cards"
+                  className="w-full sm:w-auto px-7 py-4 rounded-2xl bg-white hover:bg-zinc-50 text-zinc-900 border-2 border-zinc-200/90 font-extrabold text-base flex items-center justify-center gap-2 transition hover:border-purple-300"
+                >
+                  <Gift className="w-4 h-4 text-purple-600" />
+                  <span>Browse Catalog</span>
+                </Link>
+              )}
             </div>
 
             {/* Popular Brand Chips */}
-            <div className="pt-2">
-              <div className="text-xs font-bold uppercase tracking-wider text-zinc-400 mb-2.5">
-                Popular right now:
+            {popularBrands.length > 0 && (
+              <div className="pt-2">
+                <div className="text-xs font-bold uppercase tracking-wider text-zinc-400 mb-2.5">
+                  Popular Brands:
+                </div>
+                <div className="flex flex-wrap items-center justify-center lg:justify-start gap-1.5">
+                  {popularBrands.map((brand) => (
+                    <Link
+                      key={brand.id}
+                      href={`/cards/${brand.id}`}
+                      className="text-xs font-bold px-3 py-1.5 rounded-full bg-white hover:bg-purple-50 text-zinc-700 hover:text-purple-700 border border-zinc-200 hover:border-purple-300 shadow-xs transition"
+                    >
+                      {brand.name}
+                    </Link>
+                  ))}
+                </div>
               </div>
-              <div className="flex flex-wrap items-center justify-center lg:justify-start gap-1.5">
-                {popularBrands.map((brand) => (
-                  <Link
-                    key={brand.id}
-                    href={`/cards/${brand.id}`}
-                    className="text-xs font-bold px-3 py-1.5 rounded-full bg-white hover:bg-purple-50 text-zinc-700 hover:text-purple-700 border border-zinc-200 hover:border-purple-300 shadow-xs transition"
-                  >
-                    {brand.name}
-                  </Link>
-                ))}
-              </div>
-            </div>
+            )}
 
             {/* Micro Social Proof */}
             <div className="pt-4 flex items-center justify-center lg:justify-start gap-4 text-xs text-zinc-500 font-medium">
@@ -117,7 +149,7 @@ export const HeroSection: React.FC = () => {
                 </div>
               </div>
               <span>
-                <strong className="text-zinc-900 font-bold">42,000+</strong> gifts sent • Official provider backed
+                <strong className="text-zinc-900 font-bold">100% Genuine</strong> digital codes • Instant email delivery
               </span>
             </div>
           </div>
@@ -125,38 +157,79 @@ export const HeroSection: React.FC = () => {
           {/* Right Column: Actual Gift Card Artwork Showcase */}
           <div className="lg:col-span-6 relative flex items-center justify-center py-6">
             <div className="relative w-full max-w-md h-[340px] sm:h-[400px] flex items-center justify-center">
-              {/* Back Left Card: Spotify */}
-              <div className="absolute -top-3 -left-4 sm:left-2 rotate-[-9deg] scale-90 opacity-80 transition-all duration-300 hover:rotate-[-5deg] hover:opacity-100 hover:scale-95 shadow-xl rounded-2xl bg-zinc-900 p-2 border border-zinc-800">
-                <div className="w-64 sm:w-72 aspect-[1.6] bg-black rounded-xl overflow-hidden flex items-center justify-center p-3">
-                  <img
-                    src={heroCard3.giftCardUrl}
-                    alt={heroCard3.brand}
-                    className="w-full h-full object-contain"
-                  />
+              {heroCard3 && (
+                /* Back Left Card */
+                <div className="absolute -top-3 -left-4 sm:left-2 rotate-[-9deg] scale-90 opacity-80 transition-all duration-300 hover:rotate-[-5deg] hover:opacity-100 hover:scale-95 shadow-xl rounded-2xl bg-zinc-900 p-2 border border-zinc-800">
+                  <div className="w-64 sm:w-72 aspect-[1.6] bg-black rounded-xl overflow-hidden flex items-center justify-center p-3">
+                    {heroCard3.giftCardUrl ? (
+                      <img
+                        src={heroCard3.giftCardUrl}
+                        alt={heroCard3.brandName}
+                        className="w-full h-full object-contain"
+                      />
+                    ) : (
+                      <div className="text-center text-white">
+                        <p className="font-black text-lg">{heroCard3.brandName}</p>
+                        <p className="text-xs text-purple-300">{heroCard3.currency}</p>
+                      </div>
+                    )}
+                  </div>
                 </div>
-              </div>
+              )}
 
-              {/* Back Right Card: Apple */}
-              <div className="absolute -bottom-2 -right-4 sm:right-2 rotate-[8deg] scale-90 opacity-85 transition-all duration-300 hover:rotate-[4deg] hover:opacity-100 hover:scale-95 shadow-xl rounded-2xl bg-white p-2 border border-zinc-200">
-                <div className="w-64 sm:w-72 aspect-[1.6] bg-zinc-50 rounded-xl overflow-hidden flex items-center justify-center p-3">
-                  <img
-                    src={heroCard2.giftCardUrl}
-                    alt={heroCard2.brand}
-                    className="w-full h-full object-contain"
-                  />
+              {heroCard2 && (
+                /* Back Right Card */
+                <div className="absolute -bottom-2 -right-4 sm:right-2 rotate-[8deg] scale-90 opacity-85 transition-all duration-300 hover:rotate-[4deg] hover:opacity-100 hover:scale-95 shadow-xl rounded-2xl bg-white p-2 border border-zinc-200">
+                  <div className="w-64 sm:w-72 aspect-[1.6] bg-zinc-50 rounded-xl overflow-hidden flex items-center justify-center p-3">
+                    {heroCard2.giftCardUrl ? (
+                      <img
+                        src={heroCard2.giftCardUrl}
+                        alt={heroCard2.brandName}
+                        className="w-full h-full object-contain"
+                      />
+                    ) : (
+                      <div className="text-center text-zinc-900">
+                        <p className="font-black text-lg">{heroCard2.brandName}</p>
+                        <p className="text-xs text-purple-600">{heroCard2.currency}</p>
+                      </div>
+                    )}
+                  </div>
                 </div>
-              </div>
+              )}
 
-              {/* Center Hero Card: Amazon */}
-              <div className="relative z-20 scale-100 sm:scale-105 transition-transform duration-300 hover:scale-110 shadow-2xl rounded-3xl bg-zinc-950 p-2.5 border border-zinc-800">
-                <div className="w-72 sm:w-80 aspect-[1.6] bg-[#131921] rounded-2xl overflow-hidden flex items-center justify-center p-4">
-                  <img
-                    src={heroCard1.giftCardUrl}
-                    alt={heroCard1.brand}
-                    className="w-full h-full object-contain filter drop-shadow-lg"
-                  />
+              {/* Center Hero Card */}
+              {heroCard1 ? (
+                <div className="relative z-20 scale-100 sm:scale-105 transition-transform duration-300 hover:scale-110 shadow-2xl rounded-3xl bg-zinc-950 p-2.5 border border-zinc-800">
+                  <div className="w-72 sm:w-80 aspect-[1.6] bg-[#131921] rounded-2xl overflow-hidden flex items-center justify-center p-4">
+                    {heroCard1.giftCardUrl ? (
+                      <img
+                        src={heroCard1.giftCardUrl}
+                        alt={heroCard1.brandName}
+                        className="w-full h-full object-contain filter drop-shadow-lg"
+                      />
+                    ) : (
+                      <div className="text-center text-white">
+                        <p className="font-black text-2xl">{heroCard1.brandName}</p>
+                        <p className="text-sm text-purple-400 font-bold">{heroCard1.country} • {heroCard1.currency}</p>
+                      </div>
+                    )}
+                  </div>
                 </div>
-              </div>
+              ) : (
+                /* Sleek Default Gift Card Placeholder */
+                <div className="relative z-20 scale-100 sm:scale-105 shadow-2xl rounded-3xl bg-gradient-to-br from-purple-900 via-zinc-900 to-black p-6 border border-zinc-800 text-white w-72 sm:w-80 aspect-[1.6] flex flex-col justify-between">
+                  <div className="flex items-center justify-between">
+                    <span className="px-3 py-1 rounded-full bg-purple-500/20 text-purple-300 text-xs font-bold border border-purple-500/30">
+                      Instant Digital
+                    </span>
+                    <Sparkles className="w-5 h-5 text-amber-400" />
+                  </div>
+                  <div>
+                    <h3 className="font-black text-2xl tracking-tight">Digital Gift Card</h3>
+                    <p className="text-xs text-zinc-400 mt-1">Instant delivery to phone & email</p>
+                  </div>
+                </div>
+              )}
 
               {/* Floating Speed Pill */}
               <div className="absolute -top-3 sm:top-2 right-2 sm:right-6 z-30 px-3.5 py-2 rounded-2xl bg-white shadow-xl border border-zinc-100 flex items-center gap-2">
@@ -175,7 +248,7 @@ export const HeroSection: React.FC = () => {
                   <ShieldCheck className="w-3.5 h-3.5 text-purple-600" />
                 </div>
                 <div>
-                  <div className="text-[10px] font-bold text-zinc-400 uppercase">Provider Direct</div>
+                  <div className="text-[10px] font-bold text-zinc-400 uppercase">Verified Safe</div>
                   <div className="text-xs font-black text-zinc-900">100% Genuine Codes</div>
                 </div>
               </div>

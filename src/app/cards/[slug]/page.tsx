@@ -1,18 +1,8 @@
 import { notFound } from 'next/navigation';
-import { MOCK_GIFT_CARDS } from '@/lib/giftcards/mock-provider';
+import { getReloadlyGiftCardById } from '@/lib/reloadly/giftcards';
 import { ProductCustomizer } from './ProductCustomizer';
 
-export async function generateStaticParams() {
-  const paths: { slug: string }[] = [];
-  for (const card of MOCK_GIFT_CARDS) {
-    paths.push({ slug: card.id });
-    // Also include brand slug if unique
-    if (!paths.some((p) => p.slug === card.brandSlug)) {
-      paths.push({ slug: card.brandSlug });
-    }
-  }
-  return paths;
-}
+export const dynamic = 'force-dynamic';
 
 interface ProductPageProps {
   params: Promise<{ slug: string }>;
@@ -20,13 +10,12 @@ interface ProductPageProps {
 
 export default async function ProductPage({ params }: ProductPageProps) {
   const { slug } = await params;
-  const card = MOCK_GIFT_CARDS.find(
-    (c) => c.id === slug || c.brandSlug.toLowerCase() === slug.toLowerCase()
-  );
+  const card = await getReloadlyGiftCardById(slug);
 
-  if (!card) {
+  if (!card || !card.isAvailable) {
     notFound();
   }
 
   return <ProductCustomizer card={card} />;
 }
+

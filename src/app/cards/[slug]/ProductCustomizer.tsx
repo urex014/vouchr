@@ -1,15 +1,14 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { Header } from '@/components/common/Header';
 import { Footer } from '@/components/common/Footer';
 import { CartDrawer } from '@/components/common/CartDrawer';
 import { GiftCardProduct } from '@/components/cards/GiftCardProduct';
-import { ProviderGiftCard } from '@/lib/giftcards/types';
+import { ProviderGiftCard } from '@/types';
 import { useVouchr } from '@/context/VouchrContext';
-import { MOCK_GIFT_CARDS } from '@/lib/giftcards/mock-provider';
 import {
   Zap,
   ShieldCheck,
@@ -36,9 +35,12 @@ export const ProductCustomizer: React.FC<ProductCustomizerProps> = ({ card }) =>
   const router = useRouter();
   const { format, addToCart, setIsCartOpen } = useVouchr();
 
+  const denominations = card.denominations && card.denominations.length > 0 ? card.denominations : [25, 50, 100];
+  const isAvailable = card.available && card.availability !== 'out_of_stock';
+
   // State
   const [selectedDenomination, setSelectedDenomination] = useState<number>(
-    card.denominations[1] || card.denominations[0]
+    denominations[1] || denominations[0] || 25
   );
   const [isCustomAmount, setIsCustomAmount] = useState(false);
   const [customAmountValue, setCustomAmountValue] = useState('');
@@ -56,9 +58,35 @@ export const ProductCustomizer: React.FC<ProductCustomizerProps> = ({ card }) =>
   const [scheduledTime, setScheduledTime] = useState('09:00');
 
   const [errors, setErrors] = useState<{ [key: string]: string }>({});
+  const [relatedCards, setRelatedCards] = useState<ProviderGiftCard[]>([]);
+
+  useEffect(() => {
+    let active = true;
+    async function fetchRelated() {
+      try {
+        const query = card.category ? `?category=${encodeURIComponent(card.category)}` : '';
+        const res = await fetch(`/api/giftcards${query}`);
+        if (res.ok) {
+          const json = await res.json();
+          if (active && Array.isArray(json.data)) {
+            const filtered = json.data
+              .filter((c: ProviderGiftCard) => c.id !== card.id && c.available)
+              .slice(0, 4);
+            setRelatedCards(filtered);
+          }
+        }
+      } catch (err) {
+        console.warn('Failed to load related cards', err);
+      }
+    }
+    fetchRelated();
+    return () => {
+      active = false;
+    };
+  }, [card.id, card.category]);
 
   const activeDenomination = isCustomAmount
-    ? Number(customAmountValue) || card.denominations[0]
+    ? Number(customAmountValue) || denominations[0]
     : selectedDenomination;
 
   const discount = card.discountPercentage ? card.discountPercentage / 100 : 0;
@@ -77,8 +105,8 @@ export const ProductCustomizer: React.FC<ProductCustomizerProps> = ({ card }) =>
 
     if (isCustomAmount) {
       const amt = Number(customAmountValue);
-      const min = card.minCustomAmount || 10;
-      const max = card.maxCustomAmount || 1000;
+      const min = card.minCustomAmount || (card.denominationType === 'RANGE' ? card.minAmount : 10);
+      const max = card.maxCustomAmount || (card.denominationType === 'RANGE' ? card.maxAmount : 1000);
       if (!amt || amt < min || amt > max) {
         errs.customAmount = `Please specify an amount between ${card.currencySymbol}${min} and ${card.currencySymbol}${max}`;
       }
@@ -112,7 +140,10 @@ export const ProductCustomizer: React.FC<ProductCustomizerProps> = ({ card }) =>
     };
   };
 
+  const [imageError, setImageError] = useState(false);
+
   const handleBuyNow = () => {
+    if (!isAvailable) return;
     if (!validate()) return;
     const item = createItemData();
     addToCart(item);
@@ -120,15 +151,12 @@ export const ProductCustomizer: React.FC<ProductCustomizerProps> = ({ card }) =>
   };
 
   const handleAddToBag = () => {
+    if (!isAvailable) return;
     if (!validate()) return;
     const item = createItemData();
     addToCart(item);
     setIsCartOpen(true);
   };
-
-  const relatedCards = MOCK_GIFT_CARDS.filter(
-    (c) => c.category === card.category && c.id !== card.id
-  ).slice(0, 4);
 
   return (
     <div className="min-h-screen flex flex-col bg-[#FAF9F6] text-zinc-900">
@@ -169,11 +197,27 @@ export const ProductCustomizer: React.FC<ProductCustomizerProps> = ({ card }) =>
                 {/* Large Gift Card Display */}
                 <div className="relative w-full pt-[62%] bg-[#F5F4F0] rounded-2xl overflow-hidden p-6 sm:p-8 flex items-center justify-center shadow-inner">
                   <div className="absolute inset-4 sm:inset-6 flex items-center justify-center">
-                    <img
-                      src={card.giftCardUrl}
-                      alt={`${card.brand} official digital gift card`}
-                      className="w-full h-full object-contain filter drop-shadow-xl rounded-xl"
-                    />
+                    {card.giftCardUrl && !imageError ? (
+                      <img
+                        src={card.giftCardUrl}
+                        alt={`${card.brand} official digital gift card`}
+                        className="w-full h-full object-contain filter drop-shadow-xl rounded-xl"
+                        onError={() => setImageError(true)}
+                      />
+                    ) : (
+                      <div className="w-full h-full rounded-2xl bg-gradient-to-br from-zinc-800 to-zinc-950 p-6 flex flex-col justify-between text-white shadow-xl">
+                        <div className="flex items-center justify-between">
+                          <span className="text-xs font-bold px-2.5 py-1 rounded-full bg-white/20 text-white">
+                            {card.country || 'GLOBAL'}
+                          </span>
+                          <span className="text-sm font-extrabold text-purple-300">{card.currency || 'USD'}</span>
+                        </div>
+                        <div>
+                          <h4 className="text-2xl font-black tracking-tight">{card.brand}</h4>
+                          <p className="text-xs text-zinc-400">Digital Gift Card</p>
+                        </div>
+                      </div>
+                    )}
                   </div>
                 </div>
 
@@ -184,7 +228,7 @@ export const ProductCustomizer: React.FC<ProductCustomizerProps> = ({ card }) =>
                     <span>Important Region Notice</span>
                   </div>
                   <p className="text-xs leading-relaxed text-amber-800">
-                    {card.regionDisclaimer}
+                    {card.regionDisclaimer || `Official digital voucher valid in ${card.countryName || card.country}. Redeemable directly in ${card.currency}.`}
                   </p>
                 </div>
 
@@ -196,7 +240,7 @@ export const ProductCustomizer: React.FC<ProductCustomizerProps> = ({ card }) =>
                   </div>
                   <div className="flex items-center gap-2">
                     <ShieldCheck className="w-4 h-4 text-purple-600 shrink-0" />
-                    <span>Authorized provider issuance</span>
+                    <span>100% Genuine & verified</span>
                   </div>
                 </div>
               </div>
@@ -248,7 +292,7 @@ export const ProductCustomizer: React.FC<ProductCustomizerProps> = ({ card }) =>
                 </div>
 
                 <div className="grid grid-cols-3 sm:grid-cols-4 gap-2.5">
-                  {card.denominations.map((amt) => {
+                  {denominations.map((amt) => {
                     const isSelected = !isCustomAmount && selectedDenomination === amt;
                     return (
                       <button
@@ -269,7 +313,7 @@ export const ProductCustomizer: React.FC<ProductCustomizerProps> = ({ card }) =>
                     );
                   })}
 
-                  {card.minCustomAmount && (
+                  {(card.denominationType === 'RANGE' || card.minCustomAmount) && (
                     <button
                       type="button"
                       onClick={() => setIsCustomAmount(true)}
@@ -287,7 +331,7 @@ export const ProductCustomizer: React.FC<ProductCustomizerProps> = ({ card }) =>
                 {isCustomAmount && (
                   <div className="pt-2 animate-in fade-in duration-150">
                     <label className="text-xs font-bold text-zinc-700 block mb-1">
-                      Enter amount ({card.currencySymbol}{card.minCustomAmount} - {card.currencySymbol}{card.maxCustomAmount}):
+                      Enter amount ({card.currencySymbol}{card.minCustomAmount || card.minAmount} - {card.currencySymbol}{card.maxCustomAmount || card.maxAmount}):
                     </label>
                     <div className="relative max-w-xs">
                       <span className="absolute left-3.5 top-1/2 -translate-y-1/2 font-black text-zinc-500 text-sm">
@@ -295,8 +339,8 @@ export const ProductCustomizer: React.FC<ProductCustomizerProps> = ({ card }) =>
                       </span>
                       <input
                         type="number"
-                        min={card.minCustomAmount}
-                        max={card.maxCustomAmount}
+                        min={card.minCustomAmount || card.minAmount}
+                        max={card.maxCustomAmount || card.maxAmount}
                         value={customAmountValue}
                         onChange={(e) => setCustomAmountValue(e.target.value)}
                         placeholder="e.g. 75"
@@ -478,17 +522,27 @@ export const ProductCustomizer: React.FC<ProductCustomizerProps> = ({ card }) =>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
                   <button
                     type="button"
+                    disabled={!isAvailable}
                     onClick={handleBuyNow}
-                    className="w-full py-4 rounded-2xl bg-[#FF5722] hover:bg-[#F4511E] text-white font-extrabold text-sm flex items-center justify-center gap-2 shadow-lg shadow-orange-500/25 transition-all hover:scale-[1.02]"
+                    className={`w-full py-4 rounded-2xl font-extrabold text-sm flex items-center justify-center gap-2 shadow-lg transition-all ${
+                      isAvailable
+                        ? 'bg-[#FF5722] hover:bg-[#F4511E] text-white shadow-orange-500/25 hover:scale-[1.02]'
+                        : 'bg-zinc-200 text-zinc-400 cursor-not-allowed shadow-none'
+                    }`}
                   >
-                    <span>Buy Gift Card</span>
-                    <ArrowRight className="w-4 h-4" />
+                    <span>{isAvailable ? 'Buy Gift Card' : 'Currently Unavailable'}</span>
+                    {isAvailable && <ArrowRight className="w-4 h-4" />}
                   </button>
 
                   <button
                     type="button"
+                    disabled={!isAvailable}
                     onClick={handleAddToBag}
-                    className="w-full py-4 rounded-2xl bg-zinc-800 hover:bg-zinc-700 text-white font-extrabold text-sm flex items-center justify-center gap-2 border border-zinc-700 transition"
+                    className={`w-full py-4 rounded-2xl font-extrabold text-sm flex items-center justify-center gap-2 border transition ${
+                      isAvailable
+                        ? 'bg-zinc-800 hover:bg-zinc-700 text-white border-zinc-700'
+                        : 'bg-zinc-100 text-zinc-400 border-zinc-200 cursor-not-allowed'
+                    }`}
                   >
                     <ShoppingBag className="w-4 h-4" />
                     <span>Add to Bag</span>
@@ -503,7 +557,7 @@ export const ProductCustomizer: React.FC<ProductCustomizerProps> = ({ card }) =>
                     How to Redeem your {card.brand} Gift Card
                   </h3>
                   <ol className="space-y-2.5 text-sm text-zinc-600">
-                    {card.redemptionInstructions.map((instruction, idx) => (
+                    {(card.redemptionInstructionsList || [card.redemptionInstructions || 'Redeem online at merchant checkout or official website.']).map((instruction: string, idx: number) => (
                       <li key={idx} className="flex items-start gap-3">
                         <span className="w-6 h-6 rounded-full bg-purple-100 text-purple-800 text-xs font-black flex items-center justify-center shrink-0 mt-0.5">
                           {idx + 1}
@@ -517,7 +571,7 @@ export const ProductCustomizer: React.FC<ProductCustomizerProps> = ({ card }) =>
                 <div className="pt-6 border-t border-zinc-100">
                   <h4 className="font-bold text-sm text-zinc-900 mb-2">Terms & Conditions</h4>
                   <ul className="space-y-1 text-xs text-zinc-500 list-disc pl-4">
-                    {card.termsAndConditions.map((term, idx) => (
+                    {(card.termsAndConditions || ['Valid for designated country and currency only.', 'Non-refundable and not redeemable for cash.']).map((term, idx) => (
                       <li key={idx}>{term}</li>
                     ))}
                   </ul>
@@ -540,14 +594,14 @@ export const ProductCustomizer: React.FC<ProductCustomizerProps> = ({ card }) =>
                     brand={rc.brand}
                     brandLogo={rc.logoUrl}
                     giftCardImage={rc.giftCardUrl}
-                    denominations={rc.denominations}
-                    currency={rc.currency}
-                    currencySymbol={rc.currencySymbol}
-                    country={rc.country}
+                    denominations={rc.denominations || [25, 50, 100]}
+                    currency={rc.currency || 'USD'}
+                    currencySymbol={rc.currencySymbol || '$'}
+                    country={rc.country || 'GLOBAL'}
                     countryName={rc.countryName}
-                    category={rc.category}
-                    availability={rc.availability}
-                    deliveryMethod={rc.deliveryMethod}
+                    category={(rc.category as any) || 'Other'}
+                    availability={rc.availability || 'in_stock'}
+                    deliveryMethod={(rc.deliveryMethod as any) || 'digital'}
                     discountPercentage={rc.discountPercentage}
                   />
                 ))}
