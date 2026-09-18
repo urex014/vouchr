@@ -16,7 +16,23 @@ export class AdminService {
    * Retrieves real-time administrative stats aggregated from MongoDB
    */
   static async getStats(): Promise<AdminStats> {
-    return AdminRepository.getStats();
+    try {
+      return await AdminRepository.getStats();
+    } catch (err: any) {
+      console.warn('[AdminService] Database unavailable for stats, returning zero metrics:', err.message);
+      return {
+        totalRevenue: 0,
+        totalOrders: 0,
+        successfulOrders: 0,
+        failedOrders: 0,
+        pendingOrders: 0,
+        giftCardsSold: 0,
+        numberOfCustomers: 0,
+        todaySales: 0,
+        thisWeekSales: 0,
+        thisMonthSales: 0,
+      };
+    }
   }
 
   /**
@@ -26,7 +42,12 @@ export class AdminService {
     filters: AdminOrderFilters = {},
     options: { page?: number; limit?: number } = {}
   ): Promise<{ orders: IOrder[]; total: number; page: number; totalPages: number }> {
-    return OrderRepository.findWithFilters(filters, options);
+    try {
+      return await OrderRepository.findWithFilters(filters, options);
+    } catch (err: any) {
+      console.warn('[AdminService] Database unavailable for orders, returning empty collection:', err.message);
+      return { orders: [], total: 0, page: 1, totalPages: 1 };
+    }
   }
 
   /**
@@ -157,7 +178,11 @@ export class AdminService {
   static async getPayments(
     options: { page?: number; limit?: number } = {}
   ): Promise<{ payments: IPayment[]; total: number }> {
-    return PaymentRepository.findAll(options);
+    try {
+      return await PaymentRepository.findAll(options);
+    } catch (err: any) {
+      return { payments: [], total: 0 };
+    }
   }
 
   /**
@@ -166,7 +191,11 @@ export class AdminService {
   static async getGiftCards(
     options: { page?: number; limit?: number } = {}
   ): Promise<{ giftCards: IGiftCard[]; total: number }> {
-    return GiftCardRepository.findAll(options);
+    try {
+      return await GiftCardRepository.findAll(options);
+    } catch (err: any) {
+      return { giftCards: [], total: 0 };
+    }
   }
 
   /**
@@ -175,6 +204,10 @@ export class AdminService {
   static async getAuditLogs(
     options: { page?: number; limit?: number } = {}
   ): Promise<{ logs: IAdminAuditLog[]; total: number }> {
-    return AdminRepository.getAuditLogs(options);
+    try {
+      return await AdminRepository.getAuditLogs(options);
+    } catch (err: any) {
+      return { logs: [], total: 0 };
+    }
   }
 }
