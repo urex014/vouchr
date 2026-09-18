@@ -1,3 +1,5 @@
+import { verifyCryptoPayment } from '../crypto/verifier';
+
 export interface PaymentVerificationRequest {
   paymentMethod: 'card' | 'apple_pay' | 'mobile_money' | 'crypto';
   amount: number;
@@ -6,6 +8,10 @@ export interface PaymentVerificationRequest {
     cardNumber: string;
     cardExpiry: string;
     cardCvc: string;
+  };
+  cryptoDetails?: {
+    txHash: string;
+    networkId?: string;
   };
   clientToken?: string;
 }
@@ -17,6 +23,7 @@ export interface PaymentVerificationResult {
   amountCharged: number;
   currency: string;
   verifiedAt: string;
+  explorerUrl?: string;
   error?: string;
 }
 
@@ -28,7 +35,7 @@ export interface PaymentVerificationResult {
 export async function verifyServerSidePayment(
   request: PaymentVerificationRequest
 ): Promise<PaymentVerificationResult> {
-  const { paymentMethod, amount, currency, cardDetails } = request;
+  const { paymentMethod, amount, currency, cardDetails, cryptoDetails } = request;
 
   if (!amount || amount <= 0) {
     return {
@@ -42,7 +49,52 @@ export async function verifyServerSidePayment(
     };
   }
 
-  // Validate method-specific requirements
+  // 1. Crypto on-chain verification
+  if (paymentMethod === 'crypto') {
+    if (!cryptoDetails?.txHash) {
+      return {
+        success: false,
+        paymentId: '',
+        paymentMethod: 'crypto',
+        amountCharged: 0,
+        currency,
+        verifiedAt: new Date().toISOString(),
+        error: 'Transaction hash is required to verify crypto payment.',
+      };
+    }
+
+    const cryptoResult = await verifyCryptoPayment({
+      txHash: cryptoDetails.txHash,
+      networkId: cryptoDetails.networkId,
+      expectedAmountUSD: amount,
+    });
+
+    if (!cryptoResult.success) {
+      return {
+        success: false,
+        paymentId: '',
+        paymentMethod: 'crypto',
+        amountCharged: 0,
+        currency,
+        verifiedAt: new Date().toISOString(),
+        explorerUrl: cryptoResult.explorerUrl,
+        error: cryptoResult.error || 'Crypto payment verification failed on-chain.',
+      };
+    }
+
+    const paymentId = `crypto_${cryptoResult.networkId}_${cryptoResult.txHash.slice(0, 10)}`;
+    return {
+      success: true,
+      paymentId,
+      paymentMethod: 'crypto',
+      amountCharged: cryptoResult.amountReceived,
+      currency: 'USD',
+      explorerUrl: cryptoResult.explorerUrl,
+      verifiedAt: cryptoResult.verifiedAt,
+    };
+  }
+
+  // 2. Validate card requirements
   if (paymentMethod === 'card') {
     if (!cardDetails?.cardNumber || cardDetails.cardNumber.replace(/\s+/g, '').length < 12) {
       return {

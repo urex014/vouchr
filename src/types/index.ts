@@ -63,6 +63,8 @@ export interface Order {
   voucherCode: string;
   pinCode?: string;
   claimUrl: string;
+  cryptoTxHash?: string;
+  explorerUrl?: string;
 }
 
 export interface SavedRecipient {

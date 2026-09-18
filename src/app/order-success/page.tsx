@@ -16,6 +16,8 @@ import {
   Globe,
   Clock,
   Download,
+  Coins,
+  ExternalLink,
 } from 'lucide-react';
 
 function OrderSuccessContent() {
@@ -175,6 +177,38 @@ function OrderSuccessContent() {
             {primaryItem.message && (
               <div className="p-3 bg-[#FAF9F6] rounded-xl border border-zinc-200 text-xs text-zinc-700 italic">
                 &ldquo;{primaryItem.message}&rdquo;
+              </div>
+            )}
+
+            {(order.paymentMethod === 'crypto' || order.cryptoTxHash) && (
+              <div className="p-3.5 bg-purple-50/80 rounded-xl border border-purple-200 text-xs space-y-1.5">
+                <div className="flex items-center justify-between">
+                  <span className="font-extrabold text-purple-950 flex items-center gap-1.5">
+                    <Coins className="w-4 h-4 text-purple-700" />
+                    Crypto Payout Verified On-Chain
+                  </span>
+                  <span className="text-[10px] font-extrabold text-emerald-800 bg-emerald-100 px-2 py-0.5 rounded-full">
+                    Settled to Vault
+                  </span>
+                </div>
+                {order.cryptoTxHash && (
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1 text-[11px] font-mono text-zinc-600 pt-1 border-t border-purple-100">
+                    <span className="truncate">
+                      Tx: {order.cryptoTxHash.length > 24 ? `${order.cryptoTxHash.slice(0, 14)}...${order.cryptoTxHash.slice(-8)}` : order.cryptoTxHash}
+                    </span>
+                    {order.explorerUrl && (
+                      <a
+                        href={order.explorerUrl}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="text-purple-700 font-bold hover:underline inline-flex items-center gap-1 shrink-0"
+                      >
+                        <span>View on Explorer</span>
+                        <ExternalLink className="w-3 h-3" />
+                      </a>
+                    )}
+                  </div>
+                )}
               </div>
             )}
           </div>

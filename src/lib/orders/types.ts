@@ -27,6 +27,9 @@ export interface VouchrOrder {
   reloadlyTransactionId?: number;
   status: OrderStatus;
   paymentStatus: 'UNPAID' | 'VERIFIED' | 'REFUNDED' | 'FAILED';
+  paymentMethod?: string;
+  cryptoTxHash?: string;
+  explorerUrl?: string;
   deliveryStatus: 'PENDING' | 'DISPATCHED' | 'DELIVERED' | 'SCHEDULED';
   deliveryTimestamp?: string;
   scheduledDate?: string;

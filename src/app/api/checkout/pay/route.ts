@@ -15,6 +15,7 @@ export async function POST(request: NextRequest) {
       // Payment details
       paymentMethod = 'card',
       cardDetails,
+      cryptoDetails,
       clientToken,
 
       // Order & Product details
@@ -96,6 +97,7 @@ export async function POST(request: NextRequest) {
       amount: totalToCharge,
       currency: product.currency,
       cardDetails,
+      cryptoDetails,
       clientToken,
     });
 
@@ -131,6 +133,9 @@ export async function POST(request: NextRequest) {
     await updateOrder(order.orderId, {
       status: 'PAYMENT_SUCCESS',
       paymentStatus: 'VERIFIED',
+      paymentMethod,
+      cryptoTxHash: cryptoDetails?.txHash,
+      explorerUrl: paymentVerification.explorerUrl,
     });
 
     // 3. Execute Reloadly Gift Card purchase via official API
@@ -192,6 +197,7 @@ export async function POST(request: NextRequest) {
       status: finalOrder?.status || 'PURCHASED',
       claimUrl: order.claimUrl,
       deliveryStatus: finalOrder?.deliveryStatus || 'DELIVERED',
+      explorerUrl: paymentVerification.explorerUrl,
       message: 'Gift card purchased and dispatched successfully.',
     });
   } catch (error: any) {
