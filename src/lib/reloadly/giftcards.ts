@@ -783,9 +783,10 @@ export async function getReloadlyGiftCards(
   } else {
     // Live Reloadly API
     try {
-      if (filter?.countryCode && filter.countryCode !== 'ALL' && filter.countryCode !== 'GLOBAL') {
+      const country = filter?.countryCode || filter?.country;
+      if (country && country !== 'ALL' && country !== 'GLOBAL') {
         rawProducts = await reloadlyFetch<ReloadlyProduct[]>(
-          `/products/countries/${filter.countryCode}`,
+          `/products/countries/${country}`,
           {
             cacheTtlMs: 300_000, // 5-minute cache
             logContext: { requestType: 'GET_PRODUCTS_BY_COUNTRY' },

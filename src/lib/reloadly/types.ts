@@ -152,6 +152,7 @@ export interface NormalizedGiftCard {
 
 export interface ReloadlyProductFilter {
   countryCode?: string;
+  country?: string;
   category?: string;
   brand?: string;
   search?: string;
