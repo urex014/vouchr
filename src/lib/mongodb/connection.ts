@@ -38,7 +38,7 @@ export async function connectToDatabase(): Promise<typeof mongoose> {
 
     if (!uri) {
       if (process.env.NODE_ENV === 'production') {
-        console.warn('[MongoDB] Warning: MONGODB_URI is not defined in production environment variables.');
+        throw new Error('[MongoDB] MONGODB_URI environment variable is not configured in production environment.');
       }
       try {
         // Dynamic import so it's never bundled to the browser
@@ -57,7 +57,7 @@ export async function connectToDatabase(): Promise<typeof mongoose> {
     const opts: mongoose.ConnectOptions = {
       bufferCommands: false,
       maxPoolSize: 10,
-      serverSelectionTimeoutMS: 8000,
+      serverSelectionTimeoutMS: 4000,
     };
 
     cached.promise = mongoose.connect(uri as string, opts).then((m) => {
