@@ -5,7 +5,7 @@ import { z } from 'zod';
 
 const InitializeSchema = z.object({
   orderId: z.string().min(1, 'Order ID is required'),
-  provider: z.enum(['crypto', 'card', 'apple_pay', 'mobile_money']),
+  provider: z.enum(['crypto']).default('crypto'),
   channel: z.string().optional(),
 });
 

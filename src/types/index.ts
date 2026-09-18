@@ -56,7 +56,7 @@ export interface Order {
   totalUSD: number;
   currency: string;
   totalInCurrency: number;
-  paymentMethod: 'card' | 'apple_pay' | 'google_pay' | 'instant_bank' | 'mobile_money' | 'crypto';
+  paymentMethod: 'crypto';
   paymentStatus: 'completed' | 'processing' | 'refunded';
   deliveryStatus: 'delivered' | 'scheduled' | 'opened' | 'claimed';
   deliveryTimestamp: string;

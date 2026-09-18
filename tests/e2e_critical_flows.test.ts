@@ -140,6 +140,21 @@ async function runCriticalFlowTests() {
   assert.strictEqual(paymentInit.payment.status, 'PENDING');
   console.log(`✓ Payment initialized with unique provider reference: ${paymentInit.providerReference}`);
 
+  // Strict crypto gateway enforcement check
+  let nonCryptoRejected = false;
+  try {
+    await PaymentService.initializePayment({
+      orderId: order._id.toString(),
+      provider: 'card' as any,
+    });
+  } catch (err: any) {
+    if (err.status === 400 || err.message.includes('cryptocurrency')) {
+      nonCryptoRejected = true;
+    }
+  }
+  assert(nonCryptoRejected, 'Non-crypto payment gateways must be strictly rejected');
+  console.log('✓ Non-crypto payment gateway attempt strictly rejected with HTTP 400.');
+
   // -------------------------------------------------------------
   // TEST 6: Payment Verification & Reloadly Fulfillment
   // -------------------------------------------------------------

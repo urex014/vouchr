@@ -1,15 +1,10 @@
 import { verifyCryptoPayment } from '../crypto/verifier';
 
 export interface PaymentVerificationRequest {
-  paymentMethod: 'card' | 'apple_pay' | 'mobile_money' | 'crypto';
+  paymentMethod: 'crypto';
   amount: number;
   currency: string;
-  cardDetails?: {
-    cardNumber: string;
-    cardExpiry: string;
-    cardCvc: string;
-  };
-  cryptoDetails?: {
+  cryptoDetails: {
     txHash: string;
     networkId?: string;
   };
@@ -19,7 +14,7 @@ export interface PaymentVerificationRequest {
 export interface PaymentVerificationResult {
   success: boolean;
   paymentId: string;
-  paymentMethod: string;
+  paymentMethod: 'crypto';
   amountCharged: number;
   currency: string;
   verifiedAt: string;
@@ -35,7 +30,7 @@ export interface PaymentVerificationResult {
 export async function verifyServerSidePayment(
   request: PaymentVerificationRequest
 ): Promise<PaymentVerificationResult> {
-  const { paymentMethod, amount, currency, cardDetails, cryptoDetails } = request;
+  const { paymentMethod, amount, currency, cryptoDetails } = request;
 
   if (!amount || amount <= 0) {
     return {
@@ -49,95 +44,57 @@ export async function verifyServerSidePayment(
     };
   }
 
-  // 1. Crypto on-chain verification
-  if (paymentMethod === 'crypto') {
-    if (!cryptoDetails?.txHash) {
-      return {
-        success: false,
-        paymentId: '',
-        paymentMethod: 'crypto',
-        amountCharged: 0,
-        currency,
-        verifiedAt: new Date().toISOString(),
-        error: 'Transaction hash is required to verify crypto payment.',
-      };
-    }
-
-    const cryptoResult = await verifyCryptoPayment({
-      txHash: cryptoDetails.txHash,
-      networkId: cryptoDetails.networkId,
-      expectedAmountUSD: amount,
-    });
-
-    if (!cryptoResult.success) {
-      return {
-        success: false,
-        paymentId: '',
-        paymentMethod: 'crypto',
-        amountCharged: 0,
-        currency,
-        verifiedAt: new Date().toISOString(),
-        explorerUrl: cryptoResult.explorerUrl,
-        error: cryptoResult.error || 'Crypto payment verification failed on-chain.',
-      };
-    }
-
-    const paymentId = `crypto_${cryptoResult.networkId}_${cryptoResult.txHash.slice(0, 10)}`;
+  if (paymentMethod !== 'crypto') {
     return {
-      success: true,
-      paymentId,
+      success: false,
+      paymentId: '',
       paymentMethod: 'crypto',
-      amountCharged: cryptoResult.amountReceived,
-      currency: 'USD',
-      explorerUrl: cryptoResult.explorerUrl,
-      verifiedAt: cryptoResult.verifiedAt,
+      amountCharged: 0,
+      currency,
+      verifiedAt: new Date().toISOString(),
+      error: 'Only cryptocurrency payments are accepted on this platform.',
     };
   }
 
-  // 2. Validate card requirements
-  if (paymentMethod === 'card') {
-    if (!cardDetails?.cardNumber || cardDetails.cardNumber.replace(/\s+/g, '').length < 12) {
-      return {
-        success: false,
-        paymentId: '',
-        paymentMethod,
-        amountCharged: 0,
-        currency,
-        verifiedAt: new Date().toISOString(),
-        error: 'Invalid card number provided.',
-      };
-    }
-
-    if (!cardDetails.cardExpiry || !cardDetails.cardCvc) {
-      return {
-        success: false,
-        paymentId: '',
-        paymentMethod,
-        amountCharged: 0,
-        currency,
-        verifiedAt: new Date().toISOString(),
-        error: 'Card expiry and CVC are required.',
-      };
-    }
+  if (!cryptoDetails?.txHash) {
+    return {
+      success: false,
+      paymentId: '',
+      paymentMethod: 'crypto',
+      amountCharged: 0,
+      currency,
+      verifiedAt: new Date().toISOString(),
+      error: 'Transaction hash is required to verify crypto payment.',
+    };
   }
 
-  // Generate verified transaction ID
-  const paymentId = `pay_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
-
-  console.info('[Payment Engine] Verified transaction:', {
-    paymentId,
-    amount,
-    currency,
-    method: paymentMethod,
-    timestamp: new Date().toISOString(),
+  const cryptoResult = await verifyCryptoPayment({
+    txHash: cryptoDetails.txHash,
+    networkId: cryptoDetails.networkId,
+    expectedAmountUSD: amount,
   });
 
+  if (!cryptoResult.success) {
+    return {
+      success: false,
+      paymentId: '',
+      paymentMethod: 'crypto',
+      amountCharged: 0,
+      currency,
+      verifiedAt: new Date().toISOString(),
+      explorerUrl: cryptoResult.explorerUrl,
+      error: cryptoResult.error || 'Crypto payment verification failed on-chain.',
+    };
+  }
+
+  const paymentId = `crypto_${cryptoResult.networkId}_${cryptoResult.txHash.slice(0, 10)}`;
   return {
     success: true,
     paymentId,
-    paymentMethod,
-    amountCharged: amount,
-    currency,
-    verifiedAt: new Date().toISOString(),
+    paymentMethod: 'crypto',
+    amountCharged: cryptoResult.amountReceived,
+    currency: 'USD',
+    explorerUrl: cryptoResult.explorerUrl,
+    verifiedAt: cryptoResult.verifiedAt,
   };
 }

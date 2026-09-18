@@ -8,7 +8,7 @@ import { IOrder } from '@/models/Order';
 
 export interface InitializePaymentInput {
   orderId: string;
-  provider: 'crypto' | 'card' | 'apple_pay' | 'mobile_money';
+  provider: 'crypto' | string;
   channel?: string;
   userId?: string;
 }
@@ -16,15 +16,10 @@ export interface InitializePaymentInput {
 export interface VerifyPaymentInput {
   orderId: string;
   providerReference: string;
-  provider: string;
+  provider: 'crypto' | string;
   cryptoDetails?: {
     txHash: string;
     networkId?: string;
-  };
-  cardDetails?: {
-    cardNumber: string;
-    cardExpiry: string;
-    cardCvc: string;
   };
 }
 
@@ -52,6 +47,12 @@ export class PaymentService {
       throw err;
     }
 
+    if (input.provider !== 'crypto') {
+      const err: any = new Error('Only cryptocurrency payments (USDC/crypto) are accepted on this platform.');
+      err.status = 400;
+      throw err;
+    }
+
     // Generate unique provider reference: pay_ref_<timestamp>_<random>
     const randomSuffix = Math.random().toString(36).substring(2, 9);
     const providerReference = `pay_${order.orderNumber}_${Date.now()}_${randomSuffix}`;
@@ -59,26 +60,23 @@ export class PaymentService {
     const payment = await PaymentRepository.create({
       orderId: order._id,
       userId: input.userId || order.userId,
-      provider: input.provider,
+      provider: 'crypto',
       providerReference,
       amount: order.total,
       currency: order.currency,
       status: 'PENDING',
-      channel: input.channel || input.provider,
+      channel: input.channel || 'crypto',
       metadata: {
         orderNumber: order.orderNumber,
         productName: order.productName,
       },
     });
 
-    let payoutDetails: any = null;
-    if (input.provider === 'crypto') {
-      payoutDetails = {
-        wallets: HARDCODED_WALLETS,
-        defaultNetwork: DEFAULT_CRYPTO_NETWORK,
-        amountUSD: order.total,
-      };
-    }
+    const payoutDetails = {
+      wallets: HARDCODED_WALLETS,
+      defaultNetwork: DEFAULT_CRYPTO_NETWORK,
+      amountUSD: order.total,
+    };
 
     return {
       payment,
@@ -98,7 +96,13 @@ export class PaymentService {
     order: IOrder;
     explorerUrl?: string;
   }> {
-    const { orderId, providerReference, provider, cryptoDetails, cardDetails } = input;
+    const { orderId, providerReference, provider, cryptoDetails } = input;
+
+    if (provider !== 'crypto') {
+      const err: any = new Error('Only cryptocurrency payments (USDC/crypto) are accepted on this platform.');
+      err.status = 400;
+      throw err;
+    }
 
     // 1. Fetch Order and Payment from MongoDB
     const order = await OrderRepository.findById(orderId);
@@ -128,44 +132,31 @@ export class PaymentService {
 
     let explorerUrl: string | undefined;
 
-    // 2. Provider Verification (Zero trust on client)
-    if (provider === 'crypto') {
-      if (!cryptoDetails?.txHash) {
-        const err: any = new Error('Blockchain transaction hash (TxID) is required for crypto payment.');
-        err.status = 400;
-        throw err;
-      }
-
-      const cryptoResult = await verifyCryptoPayment({
-        txHash: cryptoDetails.txHash,
-        networkId: cryptoDetails.networkId,
-        expectedAmountUSD: order.total,
-      });
-
-      if (!cryptoResult.success) {
-        if (payment) {
-          await PaymentRepository.updateStatus(payment._id.toString(), 'FAILED', undefined, {
-            error: cryptoResult.error,
-          });
-        }
-        const err: any = new Error(cryptoResult.error || 'On-chain transaction verification failed.');
-        err.status = 402;
-        throw err;
-      }
-
-      explorerUrl = cryptoResult.explorerUrl;
-    } else if (provider === 'card') {
-      if (!cardDetails?.cardNumber || cardDetails.cardNumber.replace(/\s+/g, '').length < 12) {
-        const err: any = new Error('Invalid card details.');
-        err.status = 400;
-        throw err;
-      }
-      if (!cardDetails.cardExpiry || !cardDetails.cardCvc) {
-        const err: any = new Error('Card expiry and CVC are required.');
-        err.status = 400;
-        throw err;
-      }
+    // 2. Provider Verification (Zero trust on client - on-chain crypto only)
+    if (!cryptoDetails?.txHash) {
+      const err: any = new Error('Blockchain transaction hash (TxID) is required for crypto payment.');
+      err.status = 400;
+      throw err;
     }
+
+    const cryptoResult = await verifyCryptoPayment({
+      txHash: cryptoDetails.txHash,
+      networkId: cryptoDetails.networkId,
+      expectedAmountUSD: order.total,
+    });
+
+    if (!cryptoResult.success) {
+      if (payment) {
+        await PaymentRepository.updateStatus(payment._id.toString(), 'FAILED', undefined, {
+          error: cryptoResult.error,
+        });
+      }
+      const err: any = new Error(cryptoResult.error || 'On-chain transaction verification failed.');
+      err.status = 402;
+      throw err;
+    }
+
+    explorerUrl = cryptoResult.explorerUrl;
 
     // 3. Mark Payment as SUCCESS in MongoDB
     if (!payment) {

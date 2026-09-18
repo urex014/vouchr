@@ -10,12 +10,10 @@ import { CartItem } from '@/types';
 import {
   ShieldCheck,
   Lock,
-  CreditCard,
   Zap,
   CheckCircle2,
   ArrowRight,
   Globe,
-  Smartphone,
   Coins,
   ChevronRight,
   User,
@@ -106,11 +104,8 @@ export default function CheckoutPage() {
   const [senderName, setSenderName] = useState(primaryItem.senderName || '');
   const [personalMessage, setPersonalMessage] = useState(primaryItem.message || 'Enjoy your gift!');
 
-  // Payment state
-  const [paymentMethod, setPaymentMethod] = useState<'card' | 'apple_pay' | 'mobile_money' | 'crypto'>('card');
-  const [cardNumber, setCardNumber] = useState('4242 •••• •••• 4242');
-  const [cardExpiry, setCardExpiry] = useState('12/28');
-  const [cardCvc, setCardCvc] = useState('888');
+  // Payment state: Exclusive cryptocurrency settlement
+  const paymentMethod = 'crypto' as const;
 
   // Crypto payment state
   const [selectedCryptoNetwork, setSelectedCryptoNetwork] = useState<string>('polygon-usdc');
@@ -197,34 +192,23 @@ export default function CheckoutPage() {
       return;
     }
 
-    if (paymentMethod === 'crypto') {
-      if (!cryptoTxHash.trim()) {
-        setCurrentStep(3);
-        setErrorMessage('Please enter the blockchain transaction hash for your USDC payment, or click "Fill Demo Hash" to test.');
-        return;
-      }
+    if (!cryptoTxHash.trim()) {
+      setCurrentStep(3);
+      setErrorMessage('Please enter the blockchain transaction hash for your USDC payment, or click "Fill Demo Hash" to test.');
+      return;
     }
 
     setErrorMessage(null);
     setIsProcessing(true);
-    setProcessingStage(
-      paymentMethod === 'crypto'
-        ? 'Verifying transaction receipt on blockchain...'
-        : 'Verifying payment on secure server...'
-    );
+    setProcessingStage('Verifying transaction receipt on blockchain...');
 
     try {
       const payload = {
-        paymentMethod,
-        cardDetails: paymentMethod === 'card' ? {
-          cardNumber,
-          cardExpiry,
-          cardCvc,
-        } : undefined,
-        cryptoDetails: paymentMethod === 'crypto' ? {
+        paymentMethod: 'crypto',
+        cryptoDetails: {
           txHash: cryptoTxHash.trim(),
           networkId: selectedCryptoNetwork,
-        } : undefined,
+        },
         reloadlyProductId: primaryItem.giftCard.numericId || Number(primaryItem.giftCard.id) || 101,
         amount: primaryItem.denomination,
         currency: primaryItem.giftCard.currency,
@@ -492,143 +476,27 @@ export default function CheckoutPage() {
                       3
                     </span>
                     <h3 className="font-extrabold text-base text-zinc-900">
-                      Step 3: Payment
+                      Step 3: Crypto Payment Gateway
                     </h3>
                   </div>
-                  <span className="text-xs font-bold text-emerald-600">Zero Payment Fees</span>
+                  <span className="text-xs font-bold text-emerald-700 bg-emerald-50 px-2.5 py-1 rounded-full border border-emerald-200">
+                    USDC • Zero Processing Fees
+                  </span>
                 </div>
 
-                {/* Methods */}
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
-                  <button
-                    type="button"
-                    onClick={() => setPaymentMethod('card')}
-                    className={`p-3 rounded-2xl border text-xs font-extrabold flex flex-col items-center gap-1.5 transition ${
-                      paymentMethod === 'card'
-                        ? 'border-purple-600 bg-purple-50 text-purple-900 shadow-xs'
-                        : 'border-zinc-200 text-zinc-700 bg-zinc-50'
-                    }`}
-                  >
-                    <CreditCard className="w-5 h-5" />
-                    <span>Credit Card</span>
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={() => setPaymentMethod('apple_pay')}
-                    className={`p-3 rounded-2xl border text-xs font-extrabold flex flex-col items-center gap-1.5 transition ${
-                      paymentMethod === 'apple_pay'
-                        ? 'border-purple-600 bg-purple-50 text-purple-900 shadow-xs'
-                        : 'border-zinc-200 text-zinc-700 bg-zinc-50'
-                    }`}
-                  >
-                    <Zap className="w-5 h-5 text-amber-500" />
-                    <span>Apple / Google</span>
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={() => setPaymentMethod('mobile_money')}
-                    className={`p-3 rounded-2xl border text-xs font-extrabold flex flex-col items-center gap-1.5 transition ${
-                      paymentMethod === 'mobile_money'
-                        ? 'border-purple-600 bg-purple-50 text-purple-900 shadow-xs'
-                        : 'border-zinc-200 text-zinc-700 bg-zinc-50'
-                    }`}
-                  >
-                    <Smartphone className="w-5 h-5 text-emerald-600" />
-                    <span>Mobile Money</span>
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={() => setPaymentMethod('crypto')}
-                    className={`p-3 rounded-2xl border text-xs font-extrabold flex flex-col items-center gap-1.5 transition ${
-                      paymentMethod === 'crypto'
-                        ? 'border-purple-600 bg-purple-50 text-purple-900 shadow-xs'
-                        : 'border-zinc-200 text-zinc-700 bg-zinc-50'
-                    }`}
-                  >
-                    <Coins className="w-5 h-5 text-indigo-600" />
-                    <span>USDC / Crypto</span>
-                  </button>
-                </div>
-
-                {paymentMethod === 'card' && (
-                  <div className="space-y-3 pt-2">
-                    <div>
-                      <label className="text-xs font-bold text-zinc-700 block mb-1">
-                        Card Number
-                      </label>
-                      <input
-                        type="text"
-                        value={cardNumber}
-                        onChange={(e) => setCardNumber(e.target.value)}
-                        className="w-full px-4 py-3 rounded-xl border border-zinc-200 font-mono text-sm focus:border-purple-600 focus:outline-none"
-                      />
-                    </div>
-                    <div className="grid grid-cols-2 gap-4">
-                      <div>
-                        <label className="text-xs font-bold text-zinc-700 block mb-1">
-                          Expiry
-                        </label>
-                        <input
-                          type="text"
-                          value={cardExpiry}
-                          onChange={(e) => setCardExpiry(e.target.value)}
-                          className="w-full px-4 py-3 rounded-xl border border-zinc-200 font-mono text-sm focus:border-purple-600 focus:outline-none"
-                        />
-                      </div>
-                      <div>
-                        <label className="text-xs font-bold text-zinc-700 block mb-1">
-                          CVC
-                        </label>
-                        <input
-                          type="text"
-                          value={cardCvc}
-                          onChange={(e) => setCardCvc(e.target.value)}
-                          className="w-full px-4 py-3 rounded-xl border border-zinc-200 font-mono text-sm focus:border-purple-600 focus:outline-none"
-                        />
-                      </div>
+                <div className="space-y-5 pt-1">
+                  {/* Vault Security Banner */}
+                  <div className="p-3.5 rounded-2xl bg-indigo-50/70 border border-indigo-100 text-xs flex items-start gap-2.5">
+                    <ShieldCheck className="w-5 h-5 text-indigo-600 shrink-0 mt-0.5" />
+                    <div className="text-zinc-700">
+                      <span className="font-extrabold text-indigo-950 block mb-0.5">
+                        Direct Merchant Payout Vault (Crypto Exclusive)
+                      </span>
+                      <span>
+                        Vouchr accepts cryptocurrency settlement exclusively. Transfers go directly to our secured treasury payout wallet. Once detected on-chain, your Reloadly digital gift card is immediately provisioned and dispatched.
+                      </span>
                     </div>
                   </div>
-                )}
-
-                {paymentMethod === 'apple_pay' && (
-                  <div className="p-4 rounded-2xl bg-zinc-50 border border-zinc-200 text-xs text-zinc-600 space-y-2 pt-3">
-                    <p className="font-semibold text-zinc-900">
-                      ⚡ Apple Pay &amp; Google Pay Express Checkout
-                    </p>
-                    <p>
-                      Your card stored on device will be charged seamlessly without typing credentials. Press &ldquo;Pay &amp; Send Gift Card&rdquo; below to complete biometric authentication.
-                    </p>
-                  </div>
-                )}
-
-                {paymentMethod === 'mobile_money' && (
-                  <div className="p-4 rounded-2xl bg-zinc-50 border border-zinc-200 text-xs text-zinc-600 space-y-2 pt-3">
-                    <p className="font-semibold text-zinc-900">
-                      📱 African Mobile Money (M-Pesa, MTN MoMo, Airtel)
-                    </p>
-                    <p>
-                      Enter your mobile number during confirmation to trigger the USSD push notification directly to your phone for instant authorization.
-                    </p>
-                  </div>
-                )}
-
-                {paymentMethod === 'crypto' && (
-                  <div className="space-y-5 pt-3 border-t border-zinc-100">
-                    {/* Vault Security Banner */}
-                    <div className="p-3.5 rounded-2xl bg-indigo-50/70 border border-indigo-100 text-xs flex items-start gap-2.5">
-                      <ShieldCheck className="w-5 h-5 text-indigo-600 shrink-0 mt-0.5" />
-                      <div className="text-zinc-700">
-                        <span className="font-extrabold text-indigo-950 block mb-0.5">
-                          Direct Merchant Payout Vault
-                        </span>
-                        <span>
-                          Payments are transferred directly to our hardcoded merchant payout wallet. Once verified on-chain, your Reloadly digital gift card is immediately provisioned and dispatched.
-                        </span>
-                      </div>
-                    </div>
 
                     {/* 1. Network Selector */}
                     <div>
@@ -793,8 +661,7 @@ export default function CheckoutPage() {
                       )}
                     </div>
                   </div>
-                )}
-              </div>
+                </div>
 
                 {/* STEP 4: CONFIRMATION SUMMARY */}
               <div className="bg-white rounded-3xl p-6 sm:p-7 border border-zinc-200/90 shadow-sm space-y-4">

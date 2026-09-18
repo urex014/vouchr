@@ -5,20 +5,11 @@ import { z } from 'zod';
 const VerifyPaymentSchema = z.object({
   orderId: z.string().min(1, 'Order ID is required'),
   providerReference: z.string().min(1, 'Payment provider reference is required'),
-  provider: z.string().default('crypto'),
-  cryptoDetails: z
-    .object({
-      txHash: z.string(),
-      networkId: z.string().optional(),
-    })
-    .optional(),
-  cardDetails: z
-    .object({
-      cardNumber: z.string(),
-      cardExpiry: z.string(),
-      cardCvc: z.string(),
-    })
-    .optional(),
+  provider: z.enum(['crypto']).default('crypto'),
+  cryptoDetails: z.object({
+    txHash: z.string().min(1, 'Transaction hash (TxID) is required'),
+    networkId: z.string().optional(),
+  }),
 });
 
 export async function POST(request: NextRequest) {

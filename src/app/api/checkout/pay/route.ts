@@ -10,8 +10,7 @@ export async function POST(request: NextRequest) {
 
     const {
       // Payment details
-      paymentMethod = 'card',
-      cardDetails,
+      paymentMethod = 'crypto',
       cryptoDetails,
 
       // Order & Product details
@@ -25,7 +24,21 @@ export async function POST(request: NextRequest) {
       personalMessage,
     } = body;
 
-    // 1. Validation
+    // 1. Payment Gateway Validation (Crypto Only)
+    if (paymentMethod !== 'crypto') {
+      return NextResponse.json(
+        { success: false, error: 'Only cryptocurrency payment gateways are supported on this platform.' },
+        { status: 400 }
+      );
+    }
+
+    if (!cryptoDetails?.txHash || !cryptoDetails.txHash.trim()) {
+      return NextResponse.json(
+        { success: false, error: 'Blockchain transaction hash (TxID) is required for cryptocurrency payment.' },
+        { status: 400 }
+      );
+    }
+
     if (!reloadlyProductId) {
       return NextResponse.json(
         { success: false, error: 'Product ID is required for checkout.' },
@@ -72,9 +85,8 @@ export async function POST(request: NextRequest) {
     const verificationResult = await PaymentService.verifyPayment({
       orderId: order._id.toString(),
       providerReference: paymentInit.providerReference,
-      provider: paymentMethod,
+      provider: 'crypto',
       cryptoDetails,
-      cardDetails,
     });
 
     const finalOrder = verificationResult.order;
